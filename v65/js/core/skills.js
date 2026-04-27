@@ -95,8 +95,8 @@ var SkillSystem = (function() {
         html += '<div class="cos-bag-zone" id="cosBagInstalled" data-zone="installed">';
         installed.forEach(function(id) {
             var s = skills[id];
-            html += '<div class="cos-bag-item installed" draggable="true" data-id="' + id + '" data-zone="installed">' +
-                '<span>' + s.icon + '</span></div>';
+            html += '<div class="cos-bag-item installed" draggable="true" data-id="' + id + '" data-zone="installed" title="' + s.name + '">' +
+                '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span></div>';
         });
         html += '</div>';
 
@@ -105,8 +105,8 @@ var SkillSystem = (function() {
         html += '<div class="cos-bag-zone" id="cosBagAvailable" data-zone="available">';
         available.forEach(function(id) {
             var s = plugins[id];
-            html += '<div class="cos-bag-item" draggable="true" data-id="' + id + '" data-zone="available">' +
-                '<span>' + s.icon + '</span></div>';
+            html += '<div class="cos-bag-item" draggable="true" data-id="' + id + '" data-zone="available" title="' + s.name + '">' +
+                '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span></div>';
         });
         html += '</div>';
 
@@ -273,7 +273,7 @@ var SkillSystem = (function() {
             el.className = 'cos-skill' + (activeSkill === id ? ' cos-skill-active' : '');
             el.draggable = true;
             el.dataset.skillId = id;
-            el.innerHTML = '<span>' + skill.icon + '</span>';
+            el.innerHTML = '<span class="cos-skill-icon">' + skill.icon + '</span><span class="cos-skill-label">' + skill.name + '</span>';
             el.addEventListener('click', function() {
                 if (activeSkill === id) deactivate();
                 else activate(id);

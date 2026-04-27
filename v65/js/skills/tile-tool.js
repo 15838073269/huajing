@@ -14,8 +14,8 @@ var TileToolSkill = {
 
     // ===== 基本信息 =====
     id: 'tile-tool',
-    name: '扣图',
-    icon: '扣',
+    name: '抠图',
+    icon: '抠',
     description: '异形拆分+合并拼图，支持套索辅助内扣',
     key: '8',
 

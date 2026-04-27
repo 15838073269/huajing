@@ -178,14 +178,26 @@ html, body {
     width: 46px; height: 46px;
     border-radius: var(--cos-radius-sm);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
     cursor: pointer;
     position: relative;
     transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     background: rgba(255,255,255,0.03);
     border: 1.5px solid transparent;
+}
+.cos-skill-icon {
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+}
+.cos-skill-label {
+    font-size: 8px;
+    color: var(--cos-text-dim);
+    margin-top: 2px;
+    white-space: nowrap;
+    line-height: 1;
 }
 
 .cos-skill:hover {
@@ -700,18 +712,31 @@ html, body {
     width: 56px;
     height: 56px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     border: 1px solid var(--cos-border);
     border-radius: var(--cos-radius-xs);
     background: rgba(255,255,255,0.04);
     cursor: grab;
-    font-size: 20px;
-    font-weight: bold;
     color: var(--cos-text);
     transition: all 0.15s;
     position: relative;
     user-select: none;
+}
+.cos-bag-icon {
+    font-size: 18px;
+    font-weight: bold;
+}
+.cos-bag-name {
+    font-size: 9px;
+    color: var(--cos-text-dim);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 50px;
+    text-align: center;
 }
 .cos-bag-item:hover {
     border-color: var(--cos-border-warm);
