@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画境 v65</title>
+    <link rel="stylesheet" href="css/style.css?v=65">
+</head>
+<body>
+
+    <!-- HUD 顶部 -->
+    <div class="cos-hud">
+        <div class="cos-hud-left">
+            <span class="cos-hud-brand">画境</span>
+        </div>
+        <div class="cos-hud-right">
+            <button class="cos-hud-btn" id="cos-btn-settings" title="设置">设</button>
+            <button class="cos-hud-btn" id="cos-btn-save" title="保存">存</button>
+            <button class="cos-hud-btn" id="cos-btn-fit" title="找到有效内容">查</button>
+            <button class="cos-hud-btn" id="cos-btn-reset" title="回到原点(0,0)">中</button>
+            <span style="font-size:11px;color:var(--cos-text-dim);">缩放: <span id="cos-zoom">100%</span></span>
+        </div>
+    </div>
+
+    <!-- 子工具栏 -->
+    <div class="cos-subtools" id="cos-subtools"></div>
+
+    <!-- 游戏世界（画布） -->
+    <div id="cos-world"></div>
+
+    <!-- 技能栏 -->
+    <nav class="cos-hotbar" id="cos-hotbar">
+        <div class="cos-hotbar-inner"></div>
+    </nav>
+
+    <!-- 核心（不要改顺序） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="js/core/world.js?v=65"></script>
+    <script src="js/core/ui-utils.js?v=65"></script>
+    <script src="js/core/skills.js?v=65"></script>
+    <script src="js/core/plugin-loader.js?v=65"></script>
+    <script src="js/core/storage.js?v=65"></script>
+
+    <!-- 设置（固定功能，非插件） -->
+    <script src="js/skills/settings.js?v=65"></script>
+
+    <!-- 插件清单（在这里加文件名，不需要改 index.html 的其他地方） -->
+    <script src="js/plugins.js?v=65"></script>
+
+    <!-- 启动（必须最后加载） -->
+    <script src="js/main.js?v=65"></script>
+
+</body>
+</html>
