@@ -80,7 +80,10 @@ var TileToolSkill = {
             lassoDrawing: false,
             canvasPanning: false,
             panStartX: 0,
-            panStartY: 0
+            panStartY: 0,
+            gridLineDragging: false,
+            gridLineType: null,  // 'col' or 'row'
+            gridLineIndex: -1
         };
     },
 
@@ -1072,7 +1075,7 @@ var TileToolSkill = {
             var delta = e.deltaY > 0 ? -1 : 1;
             var factor = delta > 0 ? 1.15 : 1 / 1.15;
             var oldScale = self.state.scale;
-            var newScale = Math.max(0.1, Math.min(10, oldScale * factor));
+            var newScale = Math.max(0.1, Math.min(4, oldScale * factor));
             if (newScale === oldScale) return;
 
             var wrapper = self._q('#ttCanvasWrapper');
@@ -1213,6 +1216,9 @@ var TileToolSkill = {
                 self.state.regions = [];
                 self.state.selectedRegion = -1;
                 self.state.innerSelectedRegions = {};
+                self._gridColLines = null;
+                self._gridRowLines = null;
+                self._gridRegions = null;
                 self._fitImageToView(img);
                 self._drawMain();
                 self._drawOverlay();
@@ -1287,48 +1293,52 @@ var TileToolSkill = {
     },
 
     _drawGridOverlay: function() {
-        if (!this._gridRegions || !this._gridRegions.length) return;
+        if (!this._gridColLines && !this._gridRowLines) return;
         var ctx = this._overlayCtx;
-        var s = this.state.scale;
-        var img = this.state.originalImage;
-        if (!img) return;
+        var scale = this.state.scale;
+        var lw = Math.max(1, (this._gridLineWidth || 0) * scale);
+        var cw = this._mainCanvas.width, ch = this._mainCanvas.height;
+        ctx.clearRect(0, 0, cw, ch);
 
-        // 绘制网格线
-        var rows = parseInt(this._getVal('#ttGridRows')) || 3;
-        var cols = parseInt(this._getVal('#ttGridCols')) || 3;
-        var lineWidth = parseInt(this._getVal('#ttGridLineWidth')) || 0;
-        var hasEdge = this._getChecked('#ttGridEdge');
-        var tileW = Math.floor(img.width / cols);
-        var tileH = Math.floor(img.height / rows);
+        // 列分割线
+        var self = this;
+        if (this._gridColLines) this._gridColLines.forEach(function(ox, i) {
+            var x = Math.round(ox * scale);
+            var isHover = self.state.gridLineDragging && self.state.gridLineType === 'col' && self.state.gridLineIndex === i;
+            ctx.strokeStyle = isHover ? '#ffab00' : 'rgba(233, 69, 96, 0.8)';
+            ctx.lineWidth = isHover ? lw + 2 : lw;
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke();
+        });
 
-        ctx.strokeStyle = 'rgba(233, 69, 96, 0.8)';
-        ctx.lineWidth = Math.max(1, lineWidth * s);
-        for (var c = 1; c < cols; c++) {
-            var lx = Math.round(c * tileW * s);
-            ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, this._overlayCanvas.height); ctx.stroke();
-        }
-        for (var r = 1; r < rows; r++) {
-            var ly = Math.round(r * tileH * s);
-            ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(this._overlayCanvas.width, ly); ctx.stroke();
-        }
-        if (hasEdge) {
-            ctx.strokeRect(0, 0, this._overlayCanvas.width, this._overlayCanvas.height);
+        // 行分割线
+        if (this._gridRowLines) this._gridRowLines.forEach(function(oy, i) {
+            var y = Math.round(oy * scale);
+            var isHover = self.state.gridLineDragging && self.state.gridLineType === 'row' && self.state.gridLineIndex === i;
+            ctx.strokeStyle = isHover ? '#ffab00' : 'rgba(233, 69, 96, 0.8)';
+            ctx.lineWidth = isHover ? lw + 2 : lw;
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
+        });
+
+        // 边框
+        if (this._gridHasEdge) {
+            ctx.strokeStyle = 'rgba(233, 69, 96, 0.8)';
+            ctx.lineWidth = lw;
+            ctx.strokeRect(0, 0, cw, ch);
         }
 
         // 绘制区域编号标签
-        var self = this;
-        this._gridRegions.forEach(function(region, i) {
-            var lx = (region.x + 2) * s;
-            var ly = (region.y + 2) * s;
-            var color = self.REGION_COLORS[i % self.REGION_COLORS.length];
-            ctx.fillStyle = color;
-            var label = 'R' + region.row + 'C' + region.col;
-            ctx.font = '10px sans-serif';
-            var tw = ctx.measureText(label).width;
-            ctx.fillRect(lx - 1, ly - 12, tw + 6, 14);
-            ctx.fillStyle = '#fff';
-            ctx.fillText(label, lx + 2, ly - 1);
-        });
+        if (this._gridRegions) {
+            this._gridRegions.forEach(function(region, i) {
+                var color = self.REGION_COLORS[i % self.REGION_COLORS.length];
+                ctx.fillStyle = color;
+                var label = 'R' + region.row + 'C' + region.col;
+                ctx.font = '10px sans-serif';
+                var tw = ctx.measureText(label).width;
+                ctx.fillRect(region.x + 2, region.y + 2, tw + 6, 14);
+                ctx.fillStyle = '#fff';
+                ctx.fillText(label, region.x + 4, region.y + 13);
+            });
+        }
     },
 
     _drawIrregularOverlay: function() {
@@ -1529,6 +1539,21 @@ var TileToolSkill = {
         var s = this.state.scale;
         var self = this;
 
+        // 网格线拖拽检测
+        if ((this._gridColLines && this._gridColLines.length > 0) || (this._gridRowLines && this._gridRowLines.length > 0)) {
+            var hit = this._hitTestGridLine(mx, my);
+            if (hit) {
+                this.state.gridLineDragging = true;
+                this.state.gridLineType = hit.type;
+                this.state.gridLineIndex = hit.index;
+                this._overlayCanvas.style.cursor = hit.type === 'col' ? 'col-resize' : 'row-resize';
+                this._drawGridOverlay();
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+        }
+
         // Irregular color pick mode
         if (this.state.irColorPickMode) {
             var type = this.state.irColorPickMode;
@@ -1603,6 +1628,44 @@ var TileToolSkill = {
     },
 
     _onOverlayMouseMove: function(e) {
+        // 网格线拖拽移动
+        if (this.state.gridLineDragging) {
+            var rect = this._overlayCanvas.getBoundingClientRect();
+            var cssW = rect.width, cssH = rect.height;
+            var pxW = this._overlayCanvas.width, pxH = this._overlayCanvas.height;
+            var ratioX = pxW / cssW, ratioY = pxH / cssH;
+            var mx = (e.clientX - rect.left) * ratioX;
+            var my = (e.clientY - rect.top) * ratioY;
+            var scale = this.state.scale;
+            var img = this.state.originalImage;
+
+            if (this.state.gridLineType === 'col') {
+                var newX = Math.max(10, Math.min(img.width - 10, mx / scale));
+                this._gridColLines[this.state.gridLineIndex] = Math.round(newX);
+            } else {
+                var newY = Math.max(10, Math.min(img.height - 10, my / scale));
+                this._gridRowLines[this.state.gridLineIndex] = Math.round(newY);
+            }
+            this._recalcGridRegions();
+            this._drawGridOverlay();
+            return;
+        }
+
+        // 网格线悬浮光标
+        if ((this._gridColLines && this._gridColLines.length > 0) || (this._gridRowLines && this._gridRowLines.length > 0)) {
+            var rect2 = this._overlayCanvas.getBoundingClientRect();
+            var cssW2 = rect2.width, cssH2 = rect2.height;
+            var pxW2 = this._overlayCanvas.width, pxH2 = this._overlayCanvas.height;
+            var ratioX2 = pxW2 / cssW2, ratioY2 = pxH2 / cssH2;
+            var mx2 = (e.clientX - rect2.left) * ratioX2;
+            var my2 = (e.clientY - rect2.top) * ratioY2;
+            var hit2 = this._hitTestGridLine(mx2, my2);
+            if (hit2) {
+                this._overlayCanvas.style.cursor = hit2.type === 'col' ? 'col-resize' : 'row-resize';
+                return;
+            }
+        }
+
         // 右键拖拽画布
         if (this.state.canvasPanning) {
             var wrapper = this._q('#ttCanvasWrapper');
@@ -1634,6 +1697,15 @@ var TileToolSkill = {
     },
 
     _onOverlayMouseUp: function(e) {
+        if (this.state.gridLineDragging) {
+            this.state.gridLineDragging = false;
+            this.state.gridLineType = null;
+            this.state.gridLineIndex = -1;
+            this._overlayCanvas.style.cursor = 'pointer';
+            this._recalcGridRegions();
+            this._drawGridOverlay();
+            return;
+        }
         if (this.state.canvasPanning) {
             this.state.canvasPanning = false;
             this._overlayCanvas.style.cursor = 'pointer';
@@ -2526,55 +2598,23 @@ var TileToolSkill = {
         // 绘制主图
         this._mainCtx.drawImage(img, 0, 0, this._mainCanvas.width, this._mainCanvas.height);
 
-        // 计算分割区域（基于缩放后的尺寸）
-        this._gridRegions = [];
-        var tileW = this._mainCanvas.width / cols;
-        var tileH = this._mainCanvas.height / rows;
-        var lw = lineWidth * scale;
-
-        for (var r = 0; r < rows; r++) {
-            for (var c = 0; c < cols; c++) {
-                var x = Math.round(c * tileW);
-                var y = Math.round(r * tileH);
-                var w = Math.round((c + 1) * tileW) - x;
-                var h = Math.round((r + 1) * tileH) - y;
-
-                // 排除分割线区域
-                var sx = x, sy = y, sw = w, sh = h;
-                if (lw > 0) {
-                    if (c > 0 || !hasEdge) sx = x + (c > 0 ? lw : 0);
-                    if (r > 0 || !hasEdge) sy = y + (r > 0 ? lw : 0);
-                    if (c < cols - 1 || !hasEdge) sw = w - (c > 0 ? lw : 0) - (c < cols - 1 ? lw : 0);
-                    if (r < rows - 1 || !hasEdge) sh = h - (r > 0 ? lw : 0) - (r < rows - 1 ? lw : 0);
-                }
-
-                if (sw > 0 && sh > 0) {
-                    this._gridRegions.push({
-                        x: sx, y: sy, w: sw, h: sh, row: r, col: c,
-                        ox: Math.round(sx / scale), oy: Math.round(sy / scale),
-                        ow: Math.round(sw / scale), oh: Math.round(sh / scale)
-                    });
-                }
-            }
-        }
-
-        // 绘制网格线预览
-        var ctx = this._overlayCtx;
-        ctx.clearRect(0, 0, this._overlayCanvas.width, this._overlayCanvas.height);
-        ctx.strokeStyle = 'rgba(233, 69, 96, 0.8)';
-        ctx.lineWidth = Math.max(1, lw);
+        // 存储分割线位置（原图像素坐标）
         var cw = this._mainCanvas.width, ch = this._mainCanvas.height;
-        for (var c2 = 1; c2 < cols; c2++) {
-            var lx = Math.round(c2 * tileW);
-            ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, ch); ctx.stroke();
+        this._gridRows = rows;
+        this._gridCols = cols;
+        this._gridLineWidth = lineWidth;
+        this._gridHasEdge = hasEdge;
+        this._gridColLines = [];  // 列分割线的原图 x 坐标
+        this._gridRowLines = [];  // 行分割线的原图 y 坐标
+        for (var c = 1; c < cols; c++) {
+            this._gridColLines.push(Math.round(c * img.width / cols));
         }
-        for (var r2 = 1; r2 < rows; r2++) {
-            var ly = Math.round(r2 * tileH);
-            ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(cw, ly); ctx.stroke();
+        for (var r = 1; r < rows; r++) {
+            this._gridRowLines.push(Math.round(r * img.height / rows));
         }
-        if (hasEdge) {
-            ctx.strokeRect(0, 0, cw, ch);
-        }
+
+        this._recalcGridRegions();
+        this._drawGridOverlay();
 
         // 更新信息栏
         var sizeEl = this._q('#ttInfoSize');
@@ -2584,7 +2624,77 @@ var TileToolSkill = {
         var infoBar = this._q('#ttInfoBar');
         if (infoBar) infoBar.style.display = 'flex';
 
-        this._showToast('方形分割: ' + rows + '\u00d7' + cols + ' = ' + this._gridRegions.length + ' 块');
+        this._showToast('方形分割: ' + rows + '\u00d7' + cols + ' = ' + this._gridRegions.length + ' 块（可拖拽分割线调整）');
+    },
+
+    // 根据分割线位置重新计算区域
+    _recalcGridRegions: function() {
+        var img = this.state.originalImage;
+        if (!img) return;
+        var scale = this.state.scale;
+        var lw = this._gridLineWidth * scale;
+        var hasEdge = this._gridHasEdge;
+        var cols = this._gridCols;
+        var rows = this._gridRows;
+
+        // 构建所有边界（原图坐标）
+        var colBounds = [0];
+        this._gridColLines.forEach(function(x) { colBounds.push(x); });
+        colBounds.push(img.width);
+        var rowBounds = [0];
+        this._gridRowLines.forEach(function(y) { rowBounds.push(y); });
+        rowBounds.push(img.height);
+
+        this._gridRegions = [];
+        for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+                var ox = colBounds[c], oy = rowBounds[r];
+                var ow = colBounds[c + 1] - ox, oh = rowBounds[r + 1] - oy;
+                if (ow <= 0 || oh <= 0) continue;
+
+                // 缩放到画布坐标
+                var sx = ox * scale, sy = oy * scale;
+                var sw = ow * scale, sh = oh * scale;
+
+                // 排除分割线区域（画布坐标）
+                var fx = sx, fy = sy, fw = sw, fh = sh;
+                if (lw > 0) {
+                    if (c > 0 || !hasEdge) fx = sx + (c > 0 ? lw : 0);
+                    if (r > 0 || !hasEdge) fy = sy + (r > 0 ? lw : 0);
+                    if (c < cols - 1 || !hasEdge) fw = sw - (c > 0 ? lw : 0) - (c < cols - 1 ? lw : 0);
+                    if (r < rows - 1 || !hasEdge) fh = sh - (r > 0 ? lw : 0) - (r < rows - 1 ? lw : 0);
+                }
+
+                if (fw > 0 && fh > 0) {
+                    this._gridRegions.push({
+                        x: fx, y: fy, w: fw, h: fh, row: r, col: c,
+                        ox: ox, oy: oy, ow: ow, oh: oh
+                    });
+                }
+            }
+        }
+    },
+
+    // 网格线拖拽：检测鼠标是否靠近分割线
+    _hitTestGridLine: function(canvasX, canvasY) {
+        var scale = this.state.scale;
+        var threshold = 8; // 像素
+
+        // 检测列线
+        for (var i = 0; i < this._gridColLines.length; i++) {
+            var x = Math.round(this._gridColLines[i] * scale);
+            if (Math.abs(canvasX - x) < threshold && canvasY >= 0 && canvasY <= this._mainCanvas.height) {
+                return { type: 'col', index: i };
+            }
+        }
+        // 检测行线
+        for (var j = 0; j < this._gridRowLines.length; j++) {
+            var y = Math.round(this._gridRowLines[j] * scale);
+            if (Math.abs(canvasY - y) < threshold && canvasX >= 0 && canvasX <= this._mainCanvas.width) {
+                return { type: 'row', index: j };
+            }
+        }
+        return null;
     },
 
     _gridSplitAndDownload: function() {
