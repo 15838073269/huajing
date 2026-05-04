@@ -1347,92 +1347,17 @@ var NodeEditorSkill = {
     },
 
     _showToast: function(msg) {
-        var toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%) translateY(-8px);padding:6px 18px;background:rgba(60,48,65,0.9);color:#f0e6d8;border-radius:20px;font-size:12px;z-index:99999;pointer-events:none;border:1px solid rgba(255,200,150,0.2);box-shadow:0 4px 20px rgba(240,160,80,0.15);opacity:0;transition:all 0.25s;';
-        toast.textContent = msg;
-        document.body.appendChild(toast);
-        requestAnimationFrame(function() {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(0)';
-        });
-        setTimeout(function() {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(-50%) translateY(-8px)';
-            setTimeout(function() { toast.remove(); }, 300);
-        }, 2000);
+        if (typeof showToast === 'function') showToast(msg);
     },
 
     _showOverlay: function(title, content) {
-        var self = this;
-        var overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);width:600px;max-height:80vh;background:rgba(30,24,40,0.95);border:1px solid rgba(255,200,150,0.2);border-radius:14px;z-index:9500;box-shadow:0 8px 32px rgba(0,0,0,0.4);opacity:0;transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);pointer-events:auto;backdrop-filter:blur(20px);display:flex;flex-direction:column;';
-
-        var header = document.createElement('div');
-        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,220,180,0.1);font-size:12px;font-weight:600;color:#f0a050;';
-        header.innerHTML = '<span>' + title + '</span>';
-
-        var closeBtn = document.createElement('button');
-        closeBtn.textContent = '\u2716';
-        closeBtn.style.cssText = 'width:22px;height:22px;border:none;border-radius:50%;background:transparent;color:#8a7a6a;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
-        closeBtn.addEventListener('click', function() {
-            overlay.style.opacity = '0';
-            overlay.style.transform = 'translate(-50%,-50%) scale(0.95)';
-            setTimeout(function() { overlay.remove(); }, 200);
-        });
-        closeBtn.addEventListener('mouseenter', function() {
-            closeBtn.style.background = 'rgba(224,96,96,0.2)';
-            closeBtn.style.color = '#e06060';
-        });
-        closeBtn.addEventListener('mouseleave', function() {
-            closeBtn.style.background = 'transparent';
-            closeBtn.style.color = '#8a7a6a';
-        });
-        header.appendChild(closeBtn);
-
-        var body = document.createElement('div');
-        body.style.cssText = 'padding:14px;overflow-y:auto;flex:1;';
-
-        var pre = document.createElement('pre');
-        pre.style.cssText = 'white-space:pre-wrap;font-family:"Cascadia Code","Fira Code",Consolas,monospace;font-size:12px;line-height:1.6;color:#f0e6d8;margin:0;max-height:50vh;overflow-y:auto;';
-        pre.textContent = content;
-        body.appendChild(pre);
-
-        var copyBtn = document.createElement('button');
-        copyBtn.textContent = '\u590D\u5236\u4EE3\u7801';
-        copyBtn.style.cssText = 'margin-top:10px;padding:6px 16px;border:1px solid rgba(255,200,150,0.2);border-radius:8px;background:rgba(240,160,80,0.12);color:#f0a050;font-size:11px;cursor:pointer;font-family:inherit;';
-        copyBtn.addEventListener('click', function() {
-            var textarea = document.createElement('textarea');
-            textarea.value = content;
-            textarea.style.cssText = 'position:fixed;opacity:0;';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                copyBtn.textContent = '\u5DF2\u590D\u5236!';
-                copyBtn.style.background = 'rgba(128,216,160,0.2)';
-                copyBtn.style.color = '#80d8a0';
-                setTimeout(function() {
-                    copyBtn.textContent = '\u590D\u5236\u4EE3\u7801';
-                    copyBtn.style.background = 'rgba(240,160,80,0.12)';
-                    copyBtn.style.color = '#f0a050';
-                }, 1500);
-            } catch (err) {
-                console.error('\u590D\u5236\u5931\u8D25:', err);
-            } finally {
-                document.body.removeChild(textarea);
-            }
-        });
-        body.appendChild(copyBtn);
-
-        overlay.appendChild(header);
-        overlay.appendChild(body);
-        document.body.appendChild(overlay);
-
-        requestAnimationFrame(function() {
-            overlay.style.opacity = '1';
-            overlay.style.transform = 'translate(-50%,-50%) scale(1)';
-        });
-    }
+        if (typeof showOverlay === 'function') {
+            var safeContent = content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            var html = '<pre style="white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px;line-height:1.6;color:#f0e6d8;margin:0;max-height:50vh;overflow-y:auto;">' + safeContent + '</pre>' +
+                '<button onclick="var ta=document.createElement(\'textarea\');ta.style.cssText=\'position:fixed;opacity:0;\';ta.value=this.dataset.code;document.body.appendChild(ta);ta.select();document.execCommand(\'copy\');document.body.removeChild(ta);this.textContent=\'\u5DF2\u590D\u5236!\';this.style.background=\'rgba(128,216,160,0.2)\';setTimeout(function(){this.textContent=\'\u590D\u5236\u4EE3\u7801\';this.style.background=\'rgba(240,160,80,0.12)\';}.bind(this),1500);" data-code="' + safeContent.replace(/"/g,'&quot;') + '" style="margin-top:10px;padding:6px 16px;border:1px solid rgba(255,200,150,0.2);border-radius:8px;background:rgba(240,160,80,0.12);color:#f0a050;font-size:11px;cursor:pointer;font-family:inherit;">\u590D\u5236\u4EE3\u7801</button>';
+            showOverlay(title, html, '600px');
+        }
+    },
 };
 
 // ========== 四叉树空间索引 ==========

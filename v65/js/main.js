@@ -48,7 +48,7 @@
         var promises = PLUGIN_LIST.map(function(src) {
             return new Promise(function(resolve) {
                 var s = document.createElement('script');
-                s.src = src;
+                s.src = src + '?v=84';
                 s.onload = resolve;
                 s.onerror = function() { console.warn('[PluginLoader] 加载失败: ' + src); resolve(); };
                 document.head.appendChild(s);
@@ -77,9 +77,21 @@
 
     async function restoreState() {
         var state = await GameStorage.load();
-        if (!state) return;
+        if (!state) {
+            // 首次使用：自动安装所有可用插件
+            var allPlugins = SkillSystem.getPlugins();
+            Object.keys(allPlugins).forEach(function(id) {
+                SkillSystem.installPlugin(id);
+            });
+            return;
+        }
         if (!state.version || state.version < 4) {
             GameStorage.clear();
+            // 版本不兼容：重新安装所有插件
+            var allP = SkillSystem.getPlugins();
+            Object.keys(allP).forEach(function(id) {
+                SkillSystem.installPlugin(id);
+            });
             return;
         }
         if (state.installedPlugins) {

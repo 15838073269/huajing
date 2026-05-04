@@ -272,22 +272,7 @@ var SettingsPanel = (function() {
     }
 
     function showToast(message) {
-        var existing = document.getElementById('settings-toast');
-        if (existing) existing.remove();
-
-        var toast = document.createElement('div');
-        toast.id = 'settings-toast';
-        toast.style.cssText =
-            'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);' +
-            'background:rgba(50,42,35,0.95);border:1px solid rgba(240,180,100,0.3);' +
-            'color:#f0e6d8;padding:10px 24px;border-radius:10px;font-size:13px;' +
-            'box-shadow:0 4px 16px rgba(0,0,0,0.4);z-index:99999;' +
-            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        setTimeout(function() {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 2000);
+        if (typeof showToast === 'function') showToast(message);
     }
 
     // 公开接口

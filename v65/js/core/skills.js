@@ -90,13 +90,20 @@ var SkillSystem = (function() {
 
         var html = '<div class="cos-bag">';
 
+        // 搜索框
+        html += '<div class="cos-bag-search">' +
+            '<input type="text" class="cos-bag-search-input" id="cosBagSearch" placeholder="输入编号或名称搜索...">' +
+            '</div>';
+
         // 安装区（上方）
         html += '<div class="cos-bag-zone-label">已装备</div>';
         html += '<div class="cos-bag-zone" id="cosBagInstalled" data-zone="installed">';
-        installed.forEach(function(id) {
+        installed.forEach(function(id, idx) {
             var s = skills[id];
+            var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[id]) ? PLUGIN_NUMBERS[id] : '';
             html += '<div class="cos-bag-item installed" draggable="true" data-id="' + id + '" data-zone="installed" title="' + s.name + '">' +
-                '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span></div>';
+                '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span>' +
+                (num ? '<span class="cos-bag-num">' + num + '</span>' : '') + '</div>';
         });
         html += '</div>';
 
@@ -119,6 +126,29 @@ var SkillSystem = (function() {
         showOverlay('包裹', html, '320px');
 
         setTimeout(function() {
+            // 搜索过滤
+            var searchInput = document.getElementById('cosBagSearch');
+            var allItems = document.querySelectorAll('.cos-bag-item');
+            var installedItems = document.querySelectorAll('#cosBagInstalled .cos-bag-item');
+            var availableItems = document.querySelectorAll('#cosBagAvailable .cos-bag-item');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.addEventListener('input', function() {
+                    var query = this.value.trim().toLowerCase();
+                    allItems.forEach(function(item) {
+                        if (!query) {
+                            item.style.display = '';
+                            return;
+                        }
+                        var numVal = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[item.dataset.id]) ? String(PLUGIN_NUMBERS[item.dataset.id]) : '';
+                        var nameVal = (item.dataset.zone === 'installed' ? skills[item.dataset.id] : plugins[item.dataset.id]);
+                        nameVal = nameVal ? nameVal.name.toLowerCase() : '';
+                        var match = numVal === query || nameVal.indexOf(query) >= 0;
+                        item.style.display = match ? '' : 'none';
+                    });
+                });
+            }
+
             var installedZone = document.getElementById('cosBagInstalled');
             var availableZone = document.getElementById('cosBagAvailable');
             if (!installedZone || !availableZone) return;
@@ -273,7 +303,9 @@ var SkillSystem = (function() {
             el.className = 'cos-skill' + (activeSkill === id ? ' cos-skill-active' : '');
             el.draggable = true;
             el.dataset.skillId = id;
-            el.innerHTML = '<span class="cos-skill-icon">' + skill.icon + '</span><span class="cos-skill-label">' + skill.name + '</span>';
+            var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[id]) ? PLUGIN_NUMBERS[id] : '';
+            el.innerHTML = '<span class="cos-skill-icon">' + skill.icon + '</span><span class="cos-skill-label">' + skill.name + '</span>' +
+                (num ? '<span class="cos-skill-num">' + num + '</span>' : '');
             el.addEventListener('click', function() {
                 if (activeSkill === id) deactivate();
                 else activate(id);
@@ -418,6 +450,7 @@ var SkillSystem = (function() {
         getAll: getAll,
         renderSubTools: renderSubTools,
         getSkillOrder: function() { return skillOrder.slice(); },
-        setSkillOrder: function(order) { skillOrder = order || []; renderHotbar(); }
+        setSkillOrder: function(order) { skillOrder = order || []; renderHotbar(); },
+        WindowHelper: WindowHelper
     };
 })();

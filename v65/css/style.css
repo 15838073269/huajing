@@ -33,7 +33,7 @@
     --cos-font-mono: "Cascadia Code", "Fira Code", Consolas, monospace;
     --cos-blur: blur(20px) saturate(150%);
     --cos-hotbar-h: 64px;
-    --cos-hud-h: 32px;
+    --cos-hud-h: 48px;
 }
 
 *, *::before, *::after {
@@ -737,6 +737,44 @@ html, body {
     text-overflow: ellipsis;
     max-width: 50px;
     text-align: center;
+}
+/* 编号角标 */
+.cos-skill-num, .cos-bag-num {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    font-size: 8px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.35);
+    line-height: 1;
+    pointer-events: none;
+    z-index: 1;
+}
+.cos-bag-item:hover .cos-bag-num {
+    color: rgba(255,255,255,0.55);
+}
+/* 搜索框 */
+.cos-bag-search {
+    padding: 0 4px 6px;
+}
+.cos-bag-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--cos-border);
+    border-radius: var(--cos-radius-xs);
+    color: var(--cos-text);
+    padding: 6px 10px;
+    font-size: 11px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+}
+.cos-bag-search-input:focus {
+    border-color: var(--cos-accent);
+}
+.cos-bag-search-input::placeholder {
+    color: var(--cos-text-dim);
 }
 .cos-bag-item:hover {
     border-color: var(--cos-border-warm);

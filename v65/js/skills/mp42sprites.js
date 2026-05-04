@@ -251,6 +251,11 @@ var Mp42SpritesSkill = {
         ov.appendChild(panel);
         document.body.appendChild(ov);
 
+        // 使用通用窗口缩放（四角+四边）
+        if (typeof SkillSystem !== 'undefined' && SkillSystem.WindowHelper) {
+            WindowHelper.makeResizable(ov, { minWidth: 500, minHeight: 400, storeKey: 'ms-window-rect' });
+        }
+
         this._overlay = ov;
         this._previewCanvas = previewCanvas;
         this._previewCtx = previewCanvas.getContext('2d');

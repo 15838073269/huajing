@@ -554,6 +554,9 @@ var FolderBrowserSkill = {
         // 让面板可拖拽
         this._makePanelDraggable(panel);
 
+        // 四角+四边缩放
+        this._makePanelResizable(panel);
+
         return panel;
     },
 
@@ -853,6 +856,67 @@ var FolderBrowserSkill = {
             if (isDragging) {
                 isDragging = false;
                 panel.style.cursor = 'move';
+            }
+        });
+    },
+
+    _makePanelResizable: function(panel) {
+        var dirs = ['nw','ne','sw','se','n','s','w','e'];
+        var cursors = { nw:'nwse-resize', ne:'nesw-resize', sw:'nesw-resize', se:'nwse-resize', n:'ns-resize', s:'ns-resize', w:'ew-resize', e:'ew-resize' };
+        var styles = {
+            nw: 'top:0;left:0;width:20px;height:20px;',
+            ne: 'top:0;right:0;width:20px;height:20px;',
+            sw: 'bottom:0;left:0;width:20px;height:20px;',
+            se: 'bottom:0;right:0;width:20px;height:20px;',
+            n:  'top:0;left:20px;right:20px;height:10px;',
+            s:  'bottom:0;left:20px;right:20px;height:10px;',
+            w:  'left:0;top:20px;bottom:20px;width:10px;',
+            e:  'right:0;top:20px;bottom:20px;width:10px;'
+        };
+        var state = { active: false, dir: '', startX: 0, startY: 0, startL: 0, startT: 0, startW: 0, startH: 0 };
+
+        dirs.forEach(function(dir) {
+            var h = document.createElement('div');
+            h.style.cssText = 'position:absolute;z-index:99999;cursor:' + cursors[dir] + ';' + styles[dir];
+            h.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                state.active = true;
+                state.dir = dir;
+                state.startX = e.clientX;
+                state.startY = e.clientY;
+                var r = panel.getBoundingClientRect();
+                state.startL = r.left;
+                state.startT = r.top;
+                state.startW = r.width;
+                state.startH = r.height;
+            });
+            panel.appendChild(h);
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!state.active) return;
+            var dx = e.clientX - state.startX;
+            var dy = e.clientY - state.startY;
+            var nL = state.startL, nT = state.startT, nW = state.startW, nH = state.startH;
+            var d = state.dir;
+            if (d.indexOf('e') >= 0) nW = Math.max(200, state.startW + dx);
+            if (d.indexOf('w') >= 0) { nW = Math.max(200, state.startW - dx); nL = state.startL + state.startW - nW; }
+            if (d.indexOf('s') >= 0) nH = Math.max(200, state.startH + dy);
+            if (d.indexOf('n') >= 0) { nH = Math.max(200, state.startH - dy); nT = state.startT + state.startH - nH; }
+            panel.style.left = nL + 'px';
+            panel.style.top = nT + 'px';
+            panel.style.width = nW + 'px';
+            panel.style.height = nH + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (state.active) {
+                state.active = false;
+                try {
+                    var r = panel.getBoundingClientRect();
+                    localStorage.setItem('fb-panel-rect', JSON.stringify({ w: Math.round(r.width), h: Math.round(r.height), l: Math.round(r.left), t: Math.round(r.top) }));
+                } catch(e) {}
             }
         });
     },

@@ -479,6 +479,12 @@ var TileToolSkill = {
 
         // Append to document body (position:fixed, not canvas layer)
         document.body.appendChild(overlay);
+
+        // 使用通用窗口缩放（四角+四边）
+        if (typeof SkillSystem !== 'undefined' && SkillSystem.WindowHelper) {
+            WindowHelper.makeResizable(overlay, { minWidth: 500, minHeight: 400, storeKey: 'tt-window-rect' });
+        }
+
         this._overlay = overlay;
         this._toastEl = toast;
         this._magnifierEl = mag;

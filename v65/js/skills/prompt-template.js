@@ -1,0 +1,811 @@
+/**
+ * AI 提示词模板插件 - 画境 v65
+ *
+ * - 左侧标签筛选（可增删）
+ * - 右侧模板列表，[变量]转输入框
+ * - 每条底部显示标签，可添加/移除
+ * - 标签与模板之间可拖拽调整比例
+ * - 复制按钮、导入/导出/清空
+ * - 全部数据持久化到 IndexedDB
+ */
+
+var PromptTemplateSkill = {
+
+    id: 'prompt-template',
+    name: '提示词',
+    icon: '词',
+    description: 'AI绘画提示词模板，标签管理',
+    key: 'p',
+
+    _world: null,
+    _managerEl: null,
+    _templates: [],    // [{ text: '...', tags: [] }]
+    _tags: [],         // 所有标签
+    _activeTag: null,  // null = 全部
+    _lastInputs: {},   // { 'templateIdx-slotIdx': 'value' }
+    _sidebarWidth: 120,
+    _panelX: null,
+    _panelY: null,
+    _panelW: 560,
+    _panelH: 480,
+    _fontSize: 11,
+    _DB_NAME: 'PromptTemplateDB',
+    _DB_STORE: 'data',
+    _DB_VERSION: 3,
+
+    activate: function(world) {
+        this._world = world;
+        var self = this;
+        this._loadData(function() {
+            if (!self._templates.length && typeof PROMPT_TEMPLATES !== 'undefined') {
+                PROMPT_TEMPLATES.forEach(function(t) {
+                    self._templates.unshift({ text: t, tags: [] });
+                });
+                self._saveData();
+            }
+            if (!self._managerEl) {
+                self._createManager();
+            } else {
+                self._managerEl.style.display = 'flex';
+            }
+            SkillSystem.renderSubTools();
+        });
+    },
+
+    deactivate: function() {},
+
+    getSubTools: function() {
+        var self = this;
+        return [{ label: '管理', action: function() { self._toggleManager(); } }];
+    },
+
+    save: function() { return {}; },
+    load: function() {},
+
+    // ===== IndexedDB =====
+
+    _loadData: function(cb) {
+        var self = this;
+        var req = indexedDB.open(this._DB_NAME, this._DB_VERSION);
+        req.onupgradeneeded = function(e) {
+            var db = e.target.result;
+            if (!db.objectStoreNames.contains(self._DB_STORE)) db.createObjectStore(self._DB_STORE);
+        };
+        req.onsuccess = function(e) {
+            var db = e.target.result;
+            try {
+                var tx = db.transaction(self._DB_STORE, 'readonly');
+                var get = tx.objectStore(self._DB_STORE).get('all');
+                get.onsuccess = function() {
+                    if (get.result) {
+                        var d = get.result;
+                        // v3 格式
+                        if (d.templates && d.tags) {
+                            self._templates = d.templates;
+                            self._tags = d.tags;
+                            self._activeTag = d.activeTag != null ? d.activeTag : null;
+                            self._lastInputs = d.lastInputs || {};
+                            self._sidebarWidth = d.sidebarWidth || 120;
+                            self._panelX = d.panelX;
+                            self._panelY = d.panelY;
+                            self._panelW = d.panelW || 560;
+                            self._panelH = d.panelH || 480;
+                            self._fontSize = d.fontSize || 11;
+                        }
+                        // v2 格式迁移
+                        else if (d.categories) {
+                            self._tags = [];
+                            self._templates = [];
+                            d.categories.forEach(function(cat) {
+                                if (cat.name) self._tags.push(cat.name);
+                                (cat.templates || []).forEach(function(t) {
+                                    self._templates.unshift({ text: t, tags: cat.name ? [cat.name] : [] });
+                                });
+                            });
+                            self._saveData();
+                        }
+                    }
+                    if (cb) cb();
+                };
+                get.onerror = function() { if (cb) cb(); };
+            } catch(err) { if (cb) cb(); }
+        };
+        req.onerror = function() { if (cb) cb(); };
+    },
+
+    _saveData: function() {
+        var self = this;
+        var req = indexedDB.open(this._DB_NAME, this._DB_VERSION);
+        req.onupgradeneeded = function(e) {
+            var db = e.target.result;
+            if (!db.objectStoreNames.contains(self._DB_STORE)) db.createObjectStore(self._DB_STORE);
+        };
+        req.onsuccess = function(e) {
+            var db = e.target.result;
+            try {
+                var tx = db.transaction(self._DB_STORE, 'readwrite');
+                tx.objectStore(self._DB_STORE).put({
+                    templates: self._templates,
+                    tags: self._tags,
+                    activeTag: self._activeTag,
+                    lastInputs: self._lastInputs,
+                    sidebarWidth: self._sidebarWidth,
+                    panelX: self._panelX,
+                    panelY: self._panelY,
+                    panelW: self._panelW,
+                    panelH: self._panelH,
+                    fontSize: self._fontSize
+                }, 'all');
+            } catch(err) {}
+        };
+    },
+
+    // ===== 解析模板 =====
+
+    _parseSlots: function(text) {
+        var slots = [], regex = /\[([^\]]+)\]/g, match;
+        while ((match = regex.exec(text)) !== null) {
+            slots.push({ full: match[0], label: match[1] });
+        }
+        return slots;
+    },
+
+    // ===== 面板 =====
+
+    _toggleManager: function() {
+        if (this._managerEl) {
+            this._managerEl.style.display = this._managerEl.style.display === 'none' ? 'flex' : 'none';
+            return;
+        }
+        if (!this._world) return;
+        this._createManager();
+    },
+
+    _createManager: function() {
+        var self = this;
+        var panel = document.createElement('div');
+        panel.className = 'pt-manager';
+        panel.innerHTML =
+            '<div class="pt-mgr-header">' +
+                '<span>提示词模板</span>' +
+                '<div class="pt-mgr-header-btns">' +
+                    '<button class="pt-hdr-btn" id="ptImport" title="导入">导入</button>' +
+                    '<button class="pt-hdr-btn" id="ptExport" title="导出">导出</button>' +
+                    '<button class="pt-hdr-btn pt-hdr-danger" id="ptClear" title="清空全部">清空</button>' +
+                    '<button class="pt-mgr-close" id="ptMgrClose">&times;</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="pt-mgr-body">' +
+                '<div class="pt-sidebar" id="ptSidebar"></div>' +
+                '<div class="pt-resizer" id="ptResizer"></div>' +
+                '<div class="pt-main">' +
+                    '<div class="pt-add">' +
+                        '<textarea class="pt-add-input" id="ptAddText" placeholder="输入模板，一行一条&#10;用 [中括号] 标记可变部分" rows="3"></textarea>' +
+                        '<button class="pt-btn pt-btn-primary" id="ptAddBtn" style="width:100%;margin-top:4px">添加</button>' +
+                    '</div>' +
+                    '<div class="pt-list" id="ptList"></div>' +
+                    '<div class="pt-zoom-bar">' +
+                        '<span class="pt-zoom-label">A</span>' +
+                        '<input type="range" class="pt-zoom-slider" id="ptZoomSlider" min="10" max="24" step="1">' +
+                        '<span class="pt-zoom-label" style="font-size:16px">A</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="pt-resize-handle" id="ptResizeHandle"></div>' +
+            '<input type="file" id="ptFileInput" accept=".json,.txt" style="display:none">';
+
+        document.body.appendChild(panel);
+        this._managerEl = panel;
+        panel.style.width = this._panelW + 'px';
+        panel.style.height = this._panelH + 'px';
+
+        if (this._panelX !== null && this._panelY !== null) {
+            panel.style.left = this._panelX + 'px';
+            panel.style.top = this._panelY + 'px';
+        } else {
+            panel.style.left = (window.innerWidth - 580) + 'px';
+            panel.style.top = (window.innerHeight - 560) + 'px';
+        }
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+
+        this._initPanelDrag(panel);
+        this._initResizer(panel);
+        // 使用通用窗口缩放（四角+四边）
+        if (typeof SkillSystem !== 'undefined' && SkillSystem.WindowHelper) {
+            WindowHelper.makeResizable(panel, { minWidth: 400, minHeight: 300, storeKey: 'pt-window-rect' });
+        }
+        this._initZoomSlider(panel);
+
+        panel.querySelector('#ptMgrClose').addEventListener('click', function() {
+            panel.style.display = 'none';
+        });
+
+        panel.querySelector('#ptAddBtn').addEventListener('click', function() { self._addTemplates(); });
+
+        var fileInput = panel.querySelector('#ptFileInput');
+        panel.querySelector('#ptImport').addEventListener('click', function() { fileInput.click(); });
+        fileInput.addEventListener('change', function(e) {
+            if (!e.target.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    var data = JSON.parse(ev.target.result);
+                    if (Array.isArray(data)) {
+                        var count = 0;
+                        data.forEach(function(item) {
+                            var t = typeof item === 'string' ? item : (item.text || item.template || '');
+                            if (t) { self._templates.unshift({ text: t, tags: [] }); count++; }
+                        });
+                        self._saveData(); self._renderSidebar(); self._renderList(); self._showToast('已导入 ' + count + ' 条');
+                    }
+                } catch(err) {
+                    var lines = ev.target.result.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l; });
+                    lines.forEach(function(line) { self._templates.unshift({ text: line, tags: [] }); });
+                    self._saveData(); self._renderSidebar(); self._renderList(); self._showToast('已导入 ' + lines.length + ' 条');
+                }
+                fileInput.value = '';
+            };
+            reader.readAsText(e.target.files[0]);
+        });
+
+        panel.querySelector('#ptExport').addEventListener('click', function() {
+            var blob = new Blob([JSON.stringify(self._templates, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = 'prompt-templates.json'; a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        panel.querySelector('#ptClear').addEventListener('click', function() {
+            if (!self._templates.length) return;
+            if (!confirm('确定清空所有模板？')) return;
+            self._templates = [];
+            self._saveData(); self._renderSidebar(); self._renderList(); self._showToast('已清空');
+        });
+
+        this._renderSidebar();
+        this._renderList();
+    },
+
+    // ===== 面板拖拽 =====
+
+    _initPanelDrag: function(panel) {
+        var self = this;
+        var dragging = false, offsetX, offsetY;
+        var header = panel.querySelector('.pt-mgr-header');
+        header.addEventListener('mousedown', function(e) {
+            if (e.target.closest('button')) return;
+            dragging = true;
+            offsetX = e.clientX - panel.offsetLeft;
+            offsetY = e.clientY - panel.offsetTop;
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            panel.style.left = (e.clientX - offsetX) + 'px';
+            panel.style.top = (e.clientY - offsetY) + 'px';
+        });
+        document.addEventListener('mouseup', function() {
+            if (dragging) {
+                dragging = false;
+                self._panelX = panel.offsetLeft;
+                self._panelY = panel.offsetTop;
+                self._saveData();
+            }
+        });
+    },
+
+    // ===== 分隔条 =====
+
+    _initResizer: function(panel) {
+        var self = this;
+        var resizer = panel.querySelector('#ptResizer');
+        var sidebar = panel.querySelector('#ptSidebar');
+        var dragging = false, startX, startW;
+        resizer.addEventListener('mousedown', function(e) {
+            dragging = true; startX = e.clientX; startW = sidebar.offsetWidth;
+            e.preventDefault(); e.stopPropagation();
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            var newW = Math.max(80, Math.min(250, startW + (e.clientX - startX)));
+            sidebar.style.width = newW + 'px';
+            self._sidebarWidth = newW;
+        });
+        document.addEventListener('mouseup', function() {
+            if (dragging) { dragging = false; self._saveData(); }
+        });
+    },
+
+    // ===== 右下角拖拽 =====
+
+    _initResizeHandle: function(panel) {
+        var self = this;
+        var handle = panel.querySelector('#ptResizeHandle');
+        var dragging = false, startX, startY, startW, startH;
+        handle.addEventListener('mousedown', function(e) {
+            dragging = true; startX = e.clientX; startY = e.clientY;
+            startW = panel.offsetWidth; startH = panel.offsetHeight;
+            e.preventDefault(); e.stopPropagation();
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            panel.style.width = Math.max(400, startW + (e.clientX - startX)) + 'px';
+            panel.style.height = Math.max(300, startH + (e.clientY - startY)) + 'px';
+        });
+        document.addEventListener('mouseup', function() {
+            if (dragging) {
+                dragging = false;
+                self._panelW = panel.offsetWidth;
+                self._panelH = panel.offsetHeight;
+                self._saveData();
+            }
+        });
+    },
+
+    // ===== 缩放 =====
+
+    _initZoomSlider: function(panel) {
+        var self = this;
+        var slider = panel.querySelector('#ptZoomSlider');
+        slider.value = this._fontSize;
+        this._applyFontSize(this._fontSize);
+        slider.addEventListener('input', function() {
+            var size = parseInt(this.value);
+            self._fontSize = size;
+            self._applyFontSize(size);
+            self._saveData();
+        });
+    },
+
+    _applyFontSize: function(size) {
+        if (!this._managerEl) return;
+        var list = this._managerEl.querySelector('#ptList');
+        if (list) list.style.fontSize = size + 'px';
+    },
+
+    // ===== 左侧标签 =====
+
+    _renderSidebar: function() {
+        var sidebar = this._managerEl.querySelector('#ptSidebar');
+        if (!sidebar) return;
+        var self = this;
+        sidebar.style.width = this._sidebarWidth + 'px';
+
+        var html = '<div class="pt-tag-list">';
+        // "全部"选项
+        var allActive = this._activeTag === null ? ' active' : '';
+        var allCount = this._templates.length;
+        html += '<div class="pt-tag-item' + allActive + '" data-tag="__all__">' +
+            '<span class="pt-tag-name">全部</span>' +
+            '<span class="pt-tag-count">' + allCount + '</span>' +
+        '</div>';
+        // 各标签
+        this._tags.forEach(function(tag) {
+            var active = self._activeTag === tag ? ' active' : '';
+            var count = self._templates.filter(function(t) { return t.tags.indexOf(tag) >= 0; }).length;
+            html += '<div class="pt-tag-item' + active + '" data-tag="' + self._escapeAttr(tag) + '">' +
+                '<span class="pt-tag-name">' + self._escapeHtml(tag) + '</span>' +
+                '<span class="pt-tag-count">' + count + '</span>' +
+                '<button class="pt-tag-del" data-tag="' + self._escapeAttr(tag) + '" title="删除标签">&times;</button>' +
+            '</div>';
+        });
+        html += '</div>';
+        html += '<button class="pt-btn pt-btn-add-cat" id="ptAddTag">+ 新标签</button>';
+        sidebar.innerHTML = html;
+
+        // 点击筛选
+        sidebar.querySelectorAll('.pt-tag-item').forEach(function(item) {
+            item.addEventListener('click', function(e) {
+                if (e.target.closest('.pt-tag-del')) return;
+                var tag = this.dataset.tag;
+                self._activeTag = tag === '__all__' ? null : tag;
+                self._saveData();
+                self._renderSidebar();
+                self._renderList();
+            });
+        });
+
+        // 删除标签
+        sidebar.querySelectorAll('.pt-tag-del').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var tag = this.dataset.tag;
+                if (self._tags.length <= 1) { self._showToast('至少保留一个标签'); return; }
+                if (!confirm('删除标签「' + tag + '」？模板上的该标签也会被移除。')) return;
+                self._tags = self._tags.filter(function(t) { return t !== tag; });
+                self._templates.forEach(function(t) {
+                    t.tags = t.tags.filter(function(tg) { return tg !== tag; });
+                    if (!t.tags.length) t.tags = [];
+                });
+                if (self._activeTag === tag) self._activeTag = null;
+                self._saveData();
+                self._renderSidebar();
+                self._renderList();
+            });
+        });
+
+        // 新增标签
+        sidebar.querySelector('#ptAddTag').addEventListener('click', function() {
+            var btn = this;
+            btn.style.display = 'none';
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'pt-cat-new-input';
+            input.placeholder = '标签名称，回车确认';
+            btn.parentNode.insertBefore(input, btn);
+            input.focus();
+            var done = false;
+            var finish = function() {
+                if (done) return;
+                done = true;
+                var name = input.value.trim();
+                if (name && self._tags.indexOf(name) < 0) {
+                    self._tags.push(name);
+                    self._saveData();
+                    self._renderSidebar();
+                } else {
+                    if (name) self._showToast('标签已存在');
+                    input.remove();
+                    btn.style.display = '';
+                }
+            };
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); finish(); }
+                if (e.key === 'Escape') { done = true; input.remove(); btn.style.display = ''; }
+            });
+            input.addEventListener('blur', finish);
+        });
+    },
+
+    // ===== 模板列表 =====
+
+    _getFilteredTemplates: function() {
+        if (this._activeTag === null) return this._templates;
+        var tag = this._activeTag;
+        return this._templates.filter(function(t) { return t.tags.indexOf(tag) >= 0; });
+    },
+
+    _addTemplates: function() {
+        var raw = this._managerEl.querySelector('#ptAddText').value.trim();
+        if (!raw) return;
+        var lines = raw.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l; });
+        if (!lines.length) return;
+        lines.forEach(function(line) {
+            this._templates.unshift({ text: line, tags: [] });
+        }.bind(this));
+        this._saveData();
+        this._managerEl.querySelector('#ptAddText').value = '';
+        this._renderSidebar();
+        this._renderList();
+        this._showToast('已添加 ' + lines.length + ' 条');
+    },
+
+    _renderList: function() {
+        var list = this._managerEl.querySelector('#ptList');
+        if (!list) return;
+        var self = this;
+        var filtered = this._getFilteredTemplates();
+
+        if (!filtered.length) {
+            list.innerHTML = '<div class="pt-empty">暂无模板</div>';
+            return;
+        }
+
+        var html = '';
+        filtered.forEach(function(tpl, fi) {
+            // 找到在 _templates 中的真实索引
+            var realIdx = self._templates.indexOf(tpl);
+            var text = tpl.text;
+            var slots = self._parseSlots(text);
+
+            html += '<div class="pt-item" data-idx="' + realIdx + '">';
+            // 左侧：内容 + 标签
+            html += '<div class="pt-item-left">';
+            // 模板内容
+            html += '<div class="pt-item-body">';
+            if (!slots.length) {
+                html += '<span class="pt-text">' + self._escapeHtml(text) + '</span>';
+            } else {
+                var lastIdx = 0;
+                slots.forEach(function(slot, si) {
+                    var start = text.indexOf(slot.full, lastIdx);
+                    if (start > lastIdx) {
+                        html += '<span class="pt-text">' + self._escapeHtml(text.slice(lastIdx, start)) + '</span>';
+                    }
+                    var saved = self._lastInputs[realIdx + '-' + si] || '';
+                    html += '<input class="pt-slot" type="text" data-ti="' + realIdx + '" data-si="' + si + '" value="' + self._escapeAttr(saved) + '" placeholder="' + self._escapeAttr(slot.label) + '">';
+                    lastIdx = start + slot.full.length;
+                });
+                if (lastIdx < text.length) {
+                    html += '<span class="pt-text">' + self._escapeHtml(text.slice(lastIdx)) + '</span>';
+                }
+            }
+            html += '</div>';
+            // 标签栏
+            html += '<div class="pt-item-tags">';
+            tpl.tags.forEach(function(tag) {
+                html += '<span class="pt-item-tag" data-idx="' + realIdx + '" data-tag="' + self._escapeAttr(tag) + '">' +
+                    self._escapeHtml(tag) +
+                    '<button class="pt-item-tag-del" data-idx="' + realIdx + '" data-tag="' + self._escapeAttr(tag) + '">&times;</button>' +
+                '</span>';
+            });
+            html += '<button class="pt-item-tag-add" data-idx="' + realIdx + '">+标签</button>';
+            html += '</div>';
+            html += '</div>';
+            // 右侧：操作按钮
+            html += '<div class="pt-item-actions">' +
+                '<button class="pt-copy-btn" data-idx="' + realIdx + '">复制</button>' +
+                '<button class="pt-del-btn" data-idx="' + realIdx + '">关</button>' +
+            '</div>';
+            html += '</div>';
+        });
+        list.innerHTML = html;
+
+        // 输入框
+        list.querySelectorAll('.pt-slot').forEach(function(input) {
+            input.addEventListener('input', function() {
+                self._lastInputs[this.dataset.ti + '-' + this.dataset.si] = this.value;
+                self._saveData();
+            });
+            input.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+        });
+
+        // 复制
+        list.querySelectorAll('.pt-copy-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                self._copyTemplate(parseInt(this.dataset.idx), this);
+            });
+        });
+
+        // 删除
+        list.querySelectorAll('.pt-del-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var idx = parseInt(this.dataset.idx);
+                self._templates.splice(idx, 1);
+                self._saveData();
+                self._renderSidebar();
+                self._renderList();
+            });
+        });
+
+        // 移除标签
+        list.querySelectorAll('.pt-item-tag-del').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var idx = parseInt(this.dataset.idx);
+                var tag = this.dataset.tag;
+                var tpl = self._templates[idx];
+                tpl.tags = tpl.tags.filter(function(t) { return t !== tag; });
+                if (!tpl.tags.length) tpl.tags = [];
+                self._saveData();
+                self._renderSidebar();
+                self._renderList();
+            });
+        });
+
+        // 添加标签
+        list.querySelectorAll('.pt-item-tag-add').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var idx = parseInt(this.dataset.idx);
+                var tpl = self._templates[idx];
+                // 找出还没打的标签
+                var available = self._tags.filter(function(t) { return tpl.tags.indexOf(t) < 0; });
+                if (!available.length) { self._showToast('所有标签都已添加'); return; }
+                // 创建小下拉菜单
+                var menu = document.createElement('div');
+                menu.className = 'pt-tag-menu';
+                available.forEach(function(tag) {
+                    var item = document.createElement('div');
+                    item.className = 'pt-tag-menu-item';
+                    item.textContent = tag;
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        tpl.tags.push(tag);
+                        self._saveData();
+                        self._renderSidebar();
+                        self._renderList();
+                        menu.remove();
+                    });
+                    menu.appendChild(item);
+                });
+                btn.parentNode.appendChild(menu);
+                // 点击其他地方关闭
+                setTimeout(function() {
+                    document.addEventListener('click', function handler(ev) {
+                        if (!menu.contains(ev.target)) {
+                            menu.remove();
+                            document.removeEventListener('click', handler);
+                        }
+                    });
+                }, 0);
+            });
+        });
+    },
+
+    _copyTemplate: function(idx, btnEl) {
+        var text = this._templates[idx].text;
+        var slots = this._parseSlots(text);
+        var result = text;
+
+        if (slots.length) {
+            var list = this._managerEl.querySelector('#ptList');
+            var item = list.querySelector('.pt-item[data-idx="' + idx + '"]');
+            if (item) {
+                item.querySelectorAll('.pt-slot').forEach(function(input) {
+                    var si = parseInt(input.dataset.si);
+                    var val = input.value.trim() || input.placeholder;
+                    result = result.replace(slots[si].full, val);
+                });
+            }
+        }
+
+        var doCopy = function() {
+            btnEl.textContent = '已复制';
+            setTimeout(function() { btnEl.textContent = '复制'; }, 1500);
+        };
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(result).then(doCopy);
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = result;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            doCopy();
+        }
+    },
+
+    _escapeHtml: function(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    },
+
+    _escapeAttr: function(str) {
+        return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+
+    _showToast: function(msg) {
+        if (typeof showToast === 'function') showToast(msg);
+    }
+};
+
+/* ===== 样式 ===== */
+(function() {
+    var s = document.createElement('style');
+    s.textContent =
+
+        /* 面板 */
+        '.pt-manager { position:fixed;z-index:99999;' +
+            'background:rgba(20,20,30,.95);color:#eee;border-radius:12px;' +
+            'box-shadow:0 8px 32px rgba(0,0,0,.6);overflow:hidden;' +
+            'border:1px solid rgba(255,255,255,.08);' +
+            'display:flex;flex-direction:column;user-select:none; }' +
+        '.pt-mgr-header { display:flex;justify-content:space-between;align-items:center;' +
+            'padding:8px 14px;background:rgba(100,200,255,.1);border-bottom:1px solid rgba(100,200,255,.15);' +
+            'cursor:move;font-size:13px;font-weight:600;color:#e2e8f0;flex-shrink:0; }' +
+        '.pt-mgr-header-btns { display:flex;align-items:center;gap:4px; }' +
+        '.pt-hdr-btn { padding:2px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);' +
+            'color:#94a3b8;border-radius:4px;cursor:pointer;font-size:10px;transition:all .15s; }' +
+        '.pt-hdr-btn:hover { background:rgba(255,255,255,.12);color:#e2e8f0; }' +
+        '.pt-hdr-danger { color:#f87171;border-color:rgba(239,68,68,.15); }' +
+        '.pt-hdr-danger:hover { background:rgba(239,68,68,.12);color:#fca5a5; }' +
+        '.pt-mgr-close { background:none;border:none;color:#888;font-size:16px;cursor:pointer;padding:0 2px;' +
+            'line-height:1;transition:color .15s; }' +
+        '.pt-mgr-close:hover { color:#f87171; }' +
+
+        /* 主体 */
+        '.pt-mgr-body { flex:1;display:flex;overflow:hidden;min-height:0; }' +
+        '.pt-sidebar { width:120px;flex-shrink:0;display:flex;flex-direction:column;' +
+            'border-right:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.15); }' +
+        '.pt-tag-list { flex:1;overflow-y:auto;padding:4px 0; }' +
+        '.pt-tag-item { display:flex;align-items:center;justify-content:space-between;' +
+            'padding:7px 12px;cursor:pointer;transition:all .15s;font-size:12px;color:#94a3b8;gap:4px; }' +
+        '.pt-tag-item:hover { background:rgba(255,255,255,.05);color:#cbd5e1; }' +
+        '.pt-tag-item.active { background:rgba(100,200,255,.1);color:#a5f3fc;border-right:2px solid #a5f3fc; }' +
+        '.pt-tag-name { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }' +
+        '.pt-tag-count { font-size:10px;color:#475569;background:rgba(255,255,255,.05);' +
+            'padding:1px 6px;border-radius:8px;flex-shrink:0; }' +
+        '.pt-tag-del { display:none;background:none;border:none;color:#475569;font-size:12px;' +
+            'cursor:pointer;padding:0 3px;border-radius:3px;transition:all .15s;flex-shrink:0;line-height:1; }' +
+        '.pt-tag-del:hover { color:#f87171;background:rgba(239,68,68,.1); }' +
+        '.pt-tag-item:hover .pt-tag-del { display:block; }' +
+        '.pt-btn-add-cat { margin:4px;padding:6px;font-size:11px; }' +
+        '.pt-cat-new-input { width:calc(100% - 8px);margin:4px;box-sizing:border-box;' +
+            'background:rgba(0,0,0,.3);border:1px solid rgba(100,200,255,.3);border-radius:4px;' +
+            'color:#e2e8f0;padding:6px 8px;font-size:11px;outline:none;font-family:inherit; }' +
+        '.pt-cat-new-input:focus { border-color:rgba(100,200,255,.5); }' +
+        '.pt-cat-new-input::placeholder { color:#475569; }' +
+
+        /* 分隔条 */
+        '.pt-resizer { width:4px;cursor:col-resize;background:transparent;flex-shrink:0;transition:background .15s; }' +
+        '.pt-resizer:hover, .pt-resizer:active { background:rgba(100,200,255,.3); }' +
+
+        /* 右侧 */
+        '.pt-main { flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden; }' +
+        '.pt-add { padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0; }' +
+        '.pt-add-input { width:100%;box-sizing:border-box;background:rgba(0,0,0,.3);' +
+            'border:1px solid rgba(255,255,255,.08);border-radius:6px;color:#e2e8f0;' +
+            'padding:6px 8px;font-size:11px;resize:none;font-family:inherit;line-height:1.5;' +
+            'transition:border-color .15s; }' +
+        '.pt-add-input:focus { outline:none;border-color:rgba(100,200,255,.4); }' +
+        '.pt-add-input::placeholder { color:#475569; }' +
+
+        /* 列表 */
+        '.pt-list { flex:1;overflow-y:auto;min-height:0; }' +
+        '.pt-empty { text-align:center;color:#475569;padding:30px 10px;font-size:12px; }' +
+        '.pt-item { display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03);transition:background .15s; }' +
+        '.pt-item:hover { background:rgba(255,255,255,.03); }' +
+        '.pt-item-body { display:flex;flex-wrap:wrap;align-items:center;gap:3px;line-height:1.6;min-width:0; }' +
+        '.pt-text { color:rgba(255,255,255,.7);word-break:break-all; }' +
+        '.pt-slot { background:rgba(165,243,252,.08);border:1px solid rgba(165,243,252,.2);' +
+            'border-radius:3px;padding:1px 6px;color:#a5f3fc;width:80px;' +
+            'outline:none;transition:border-color .15s;font-family:inherit;flex-shrink:0; }' +
+        '.pt-slot:focus { border-color:rgba(165,243,252,.5);background:rgba(165,243,252,.12); }' +
+        '.pt-slot::placeholder { color:rgba(165,243,252,.3); }' +
+        '.pt-item-left { flex:1;min-width:0; }' +
+        '.pt-item-actions { display:flex;flex-direction:row;gap:3px;flex-shrink:0;align-items:center; }' +
+        '.pt-copy-btn { padding:2px 8px;background:rgba(165,243,252,.1);border:1px solid rgba(165,243,252,.2);' +
+            'color:#a5f3fc;border-radius:3px;cursor:pointer;font-size:9px;transition:all .15s;white-space:nowrap; }' +
+        '.pt-copy-btn:hover { background:rgba(165,243,252,.2); }' +
+        '.pt-del-btn { padding:2px 8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);' +
+            'color:#f87171;border-radius:3px;cursor:pointer;font-size:9px;transition:all .15s;white-space:nowrap; }' +
+        '.pt-del-btn:hover { background:rgba(239,68,68,.18); }' +
+
+        /* 标签栏 */
+        '.pt-item-tags { display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;align-items:center;position:relative; }' +
+        '.pt-item-tag { display:inline-flex;align-items:center;gap:2px;padding:2px 8px;' +
+            'background:rgba(100,200,255,.08);border:1px solid rgba(100,200,255,.15);' +
+            'border-radius:3px;color:#7dd3fc;font-size:11px;cursor:default; }' +
+        '.pt-item-tag-del { background:none;border:none;color:#475569;font-size:12px;cursor:pointer;' +
+            'padding:0 1px;line-height:1;transition:color .15s; }' +
+        '.pt-item-tag-del:hover { color:#f87171; }' +
+        '.pt-item-tag-add { background:none;border:1px dashed rgba(255,255,255,.1);border-radius:3px;' +
+            'color:#475569;font-size:11px;cursor:pointer;padding:2px 8px;transition:all .15s; }' +
+        '.pt-item-tag-add:hover { color:#94a3b8;border-color:rgba(255,255,255,.2); }' +
+
+        /* 标签下拉菜单 */
+        '.pt-tag-menu { position:absolute;left:0;bottom:100%;margin-bottom:2px;z-index:10;' +
+            'background:rgba(30,30,40,.98);border:1px solid rgba(255,255,255,.1);border-radius:6px;' +
+            'box-shadow:0 4px 16px rgba(0,0,0,.5);min-width:80px;overflow:hidden; }' +
+        '.pt-tag-menu-item { padding:6px 12px;font-size:11px;color:#cbd5e1;cursor:pointer;transition:background .15s; }' +
+        '.pt-tag-menu-item:hover { background:rgba(100,200,255,.12);color:#a5f3fc; }' +
+
+        /* 缩放 */
+        '.pt-zoom-bar { display:flex;align-items:center;gap:6px;padding:4px 12px;' +
+            'border-top:1px solid rgba(255,255,255,.06);flex-shrink:0; }' +
+        '.pt-zoom-label { color:#475569;font-size:10px;flex-shrink:0; }' +
+        '.pt-zoom-slider { flex:1;-webkit-appearance:none;appearance:none;height:3px;' +
+            'background:rgba(255,255,255,.1);border-radius:2px;outline:none;cursor:pointer; }' +
+        '.pt-zoom-slider::-webkit-slider-thumb { -webkit-appearance:none;appearance:none;' +
+            'width:12px;height:12px;border-radius:50%;background:rgba(100,200,255,.4);' +
+            'border:1px solid rgba(100,200,255,.3);cursor:pointer; }' +
+
+        /* 拖拽手柄 */
+        '.pt-resize-handle { position:absolute;right:0;bottom:0;width:16px;height:16px;' +
+            'cursor:nwse-resize;z-index:10; }' +
+        '.pt-resize-handle::before { content:"";position:absolute;right:3px;bottom:3px;' +
+            'width:8px;height:8px;border-right:2px solid rgba(255,255,255,.2);border-bottom:2px solid rgba(255,255,255,.2); }' +
+
+        /* 滚动条 */
+        '.pt-list::-webkit-scrollbar, .pt-tag-list::-webkit-scrollbar { width:3px; }' +
+        '.pt-list::-webkit-scrollbar-thumb, .pt-tag-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08);border-radius:2px; }' +
+
+        /* 通用按钮 */
+        '.pt-btn { padding:3px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);' +
+            'color:#94a3b8;border-radius:5px;cursor:pointer;font-size:10px;transition:all .15s; }' +
+        '.pt-btn:hover { background:rgba(255,255,255,.1);color:#e2e8f0; }' +
+        '.pt-btn-primary { background:rgba(100,200,255,.15);border-color:rgba(100,200,255,.25);color:#a5f3fc; }' +
+        '.pt-btn-primary:hover { background:rgba(100,200,255,.28); }' +
+        '.pt-btn-add-cat { background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);color:#64748b; }' +
+        '.pt-btn-add-cat:hover { background:rgba(255,255,255,.06);color:#94a3b8; }';
+
+    document.head.appendChild(s);
+})();

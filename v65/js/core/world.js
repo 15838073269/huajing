@@ -207,28 +207,32 @@ var GameWorld = (function() {
     // === 事件 ===
     function setupEvents() {
         var spaceDown = false;
+        var _handlers = {};
 
-        document.addEventListener('keydown', function(e) {
+        _handlers.keydown = function(e) {
             if (e.code === 'Space' && !e.target.closest('.ne-node-textarea')) {
                 e.preventDefault();
                 spaceDown = true;
                 worldEl.style.cursor = 'grab';
             }
             if (e.code === 'Escape') emit('escape');
-        });
-        document.addEventListener('keyup', function(e) {
+        };
+        document.addEventListener('keydown', _handlers.keydown);
+
+        _handlers.keyup = function(e) {
             if (e.code === 'Space') {
                 spaceDown = false;
                 if (!state.isPanning) worldEl.style.cursor = '';
             }
-        });
+        };
+        document.addEventListener('keyup', _handlers.keyup);
 
-        // 禁止画布区域右键菜单
-        document.addEventListener('contextmenu', function(e) {
+        _handlers.contextmenu = function(e) {
             if (e.target.closest('#cos-world')) e.preventDefault();
-        });
+        };
+        document.addEventListener('contextmenu', _handlers.contextmenu);
 
-        worldEl.addEventListener('mousedown', function(e) {
+        _handlers.mousedown = function(e) {
             // 右键 = 激光切割开始
             if (e.button === 2 && e.target.closest('#cos-world')) {
                 e.preventDefault();
@@ -260,9 +264,10 @@ var GameWorld = (function() {
             }
             // 通知插件 mousedown 事件（包含世界坐标）
             emit('mousedown', { screenX: state.mouseScreenX, screenY: state.mouseScreenY, worldX: state.mouseWorldX, worldY: state.mouseWorldY, button: e.button, target: e.target });
-        });
+        };
+        worldEl.addEventListener('mousedown', _handlers.mousedown);
 
-        window.addEventListener('mousemove', function(e) {
+        _handlers.mousemove = function(e) {
             var rect = worldEl.getBoundingClientRect();
             state.mouseScreenX = e.clientX - rect.left;
             state.mouseScreenY = e.clientY - rect.top;
@@ -295,9 +300,10 @@ var GameWorld = (function() {
             }
 
             emit('mousemove', { screenX: state.mouseScreenX, screenY: state.mouseScreenY, worldX: state.mouseWorldX, worldY: state.mouseWorldY, button: e.button });
-        });
+        };
+        window.addEventListener('mousemove', _handlers.mousemove);
 
-        window.addEventListener('mouseup', function(e) {
+        _handlers.mouseup = function(e) {
             if (state.isPanning) endPan();
             // 结束激光切割
             if (laser.active) {
@@ -306,20 +312,28 @@ var GameWorld = (function() {
                 if (laser.line) laser.line.setAttribute('d', '');
             }
             emit('mouseup', { worldX: state.mouseWorldX, worldY: state.mouseWorldY, button: e.button });
-        });
+        };
+        window.addEventListener('mouseup', _handlers.mouseup);
 
-        worldEl.addEventListener('wheel', function(e) {
+        _handlers.wheel = function(e) {
             e.preventDefault();
             var rect = worldEl.getBoundingClientRect();
             zoom(e.deltaY, e.clientX - rect.left, e.clientY - rect.top);
-        }, { passive: false });
+        };
+        worldEl.addEventListener('wheel', _handlers.wheel, { passive: false });
 
-        worldEl.addEventListener('contextmenu', function(e) {
+        _handlers.wcontext = function(e) {
             e.preventDefault();
             emit('contextmenu', { screenX: e.clientX, screenY: e.clientY, worldX: state.mouseWorldX, worldY: state.mouseWorldY });
-        });
+        };
+        worldEl.addEventListener('contextmenu', _handlers.wcontext);
 
-        window.addEventListener('resize', resize);
+        _handlers.resize = resize;
+        window.addEventListener('resize', _handlers.resize);
+
+        // 保存引用以便 destroy 清理
+        setupEvents._handlers = _handlers;
+        setupEvents._worldEl = worldEl;
     }
 
     function startPan(cx, cy) {
@@ -445,6 +459,22 @@ var GameWorld = (function() {
     function hideGrid() { gridVisible = false; if (gridCtx) gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height); }
     function isGridVisible() { return gridVisible; }
 
+    function destroy() {
+        var h = setupEvents._handlers;
+        if (!h) return;
+        document.removeEventListener('keydown', h.keydown);
+        document.removeEventListener('keyup', h.keyup);
+        document.removeEventListener('contextmenu', h.contextmenu);
+        window.removeEventListener('mousemove', h.mousemove);
+        window.removeEventListener('mouseup', h.mouseup);
+        if (setupEvents._worldEl) {
+            setupEvents._worldEl.removeEventListener('wheel', h.wheel);
+            setupEvents._worldEl.removeEventListener('contextmenu', h.wcontext);
+            setupEvents._worldEl.removeEventListener('mousedown', h.mousedown);
+        }
+        window.removeEventListener('resize', h.resize);
+    }
+
     return {
         init: init, resize: resize, getLayer: getLayer,
         on: on, off: off, emit: emit,
@@ -454,6 +484,7 @@ var GameWorld = (function() {
         markContent: markContent, clearContent: clearContent,
         getState: getState, setState: setState,
         showGrid: showGrid, hideGrid: hideGrid, isGridVisible: isGridVisible,
+        destroy: destroy,
         CHUNK_SIZE: CHUNK_SIZE
     };
 })();

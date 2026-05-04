@@ -2,11 +2,16 @@
  * 插件清单
  * 添加新插件：把 js 文件放到 js/skills/ 目录，然后在这里加一行文件名
  * 取消注释即可启用对应插件
+ *
+ * 编号与插件 ID 强绑定，按列表顺序分配，不随拖拽排序变化
  */
 var PLUGIN_LIST = [
     // === 工具类 ===
     'js/skills/calculator.js',      // 🔢 高精度计算器 - 科学计算+变量+表达式解析
     'js/skills/reader.js',          // 📝 文本阅读器 - 拖放文本文件创建卡片
+    'js/skills/mao-quotes.js',      // 📕 信仰语录 - 每60秒随机展示
+    'js/skills/prompt-template.js', // 💬 提示词模板 - AI绘画提示词[变量]管理
+    'js/skills/nav-bookmarks.js',   // 🧭 导航网址 - 网址收藏+标签分类
 
     // === 图片处理 ===
     'js/skills/image-crop.js',      // ✂️ 图片裁剪 - 宽高比预设+旋转+网格
@@ -29,3 +34,24 @@ var PLUGIN_LIST = [
     // === 像素画 ===
     'js/skills/pixel-paint.js',  // 像素画 - 数字像素绘画系统
 ];
+
+/**
+ * 插件编号映射（ID -> 固定编号）
+ * 新增插件时在此添加对应编号
+ */
+var PLUGIN_NUMBERS = {
+    'calculator': 1,
+    'reader': 2,
+    'mao-quotes': 3,
+    'prompt-template': 4,
+    'nav-bookmarks': 5,
+    'image-crop': 6,
+    'mp42sprites': 7,
+    'tile-tool': 8,
+    'music': 9,
+    'video': 10,
+    'drawing': 11,
+    'folder-browser': 12,
+    'node-editor': 13,
+    'pixel-paint': 14
+};
