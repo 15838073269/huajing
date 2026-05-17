@@ -45,23 +45,23 @@ var MusicSkill = {
     _globalDropHandler: null,
     _globalDragOverHandler: null,
 
-    // 暖色调配色
+    // 冷蓝配色
     _colors: {
-        bg: 'rgba(60, 40, 30, 0.92)',
-        border: 'rgba(255, 180, 100, 0.25)',
-        accent: '#e8a040',
-        accentHover: '#f0b860',
-        text: '#f0e6d8',
-        textMuted: '#b0a090',
-        listBg: 'rgba(40, 28, 20, 0.95)',
-        itemBg: 'rgba(80, 55, 35, 0.6)',
-        itemHover: 'rgba(100, 70, 40, 0.8)',
-        activeBtn: '#e8a040',
-        inactiveBtn: 'rgba(80, 55, 35, 0.8)',
-        progressBg: 'rgba(255, 180, 100, 0.15)',
-        progressFill: '#e8a040',
-        volumeBg: 'rgba(255, 180, 100, 0.15)',
-        volumeFill: '#e8a040'
+        bg: 'rgba(15, 25, 50, 0.92)',
+        border: 'rgba(100, 160, 255, 0.25)',
+        accent: '#38bdf8',
+        accentHover: '#7dd3fc',
+        text: '#e8edf5',
+        textMuted: '#94a3b8',
+        listBg: 'rgba(10, 18, 40, 0.95)',
+        itemBg: 'rgba(20, 35, 70, 0.6)',
+        itemHover: 'rgba(30, 50, 90, 0.8)',
+        activeBtn: '#38bdf8',
+        inactiveBtn: 'rgba(20, 35, 70, 0.8)',
+        progressBg: 'rgba(56, 189, 248, 0.15)',
+        progressFill: '#38bdf8',
+        volumeBg: 'rgba(56, 189, 248, 0.15)',
+        volumeFill: '#38bdf8'
     },
 
     // ===== 生命周期 =====
@@ -579,9 +579,9 @@ var MusicSkill = {
             btn.textContent = m.label;
             btn.dataset.mode = m.key;
             var isActive = m.key === 'order';
-            btn.style.cssText = 'padding:3px 10px;border:1px solid ' + (isActive ? this._colors.accent : 'rgba(255,180,100,0.15)') + ';' +
-                'border-radius:6px;background:' + (isActive ? this._colors.activeBtn : this._colors.inactiveBtn) + ';' +
-                'color:' + (isActive ? '#3a2510' : this._colors.text) + ';font-size:11px;cursor:pointer;' +
+            btn.style.cssText = 'padding:3px 10px;border:1px solid ' + (isActive ? this._colors.accent : 'rgba(56,189,248,0.15)') + ';' +
+                'border-radius:8px;background:' + (isActive ? this._colors.activeBtn : this._colors.inactiveBtn) + ';' +
+                'color:' + (isActive ? '#0c1929' : this._colors.text) + ';font-size:11px;cursor:pointer;' +
                 'transition:all 0.15s ease;';
             modeButtons.appendChild(btn);
             modeBtns[m.key] = btn;
@@ -665,7 +665,7 @@ var MusicSkill = {
         // 添加音乐文件到列表
         audioFiles.forEach(function(file, index) {
             var li = document.createElement('li');
-            li.style.cssText = 'padding:8px 12px;border:1px solid rgba(255,180,100,0.08);border-radius:8px;' +
+            li.style.cssText = 'padding:8px 12px;border:1px solid rgba(56,189,248,0.08);border-radius:10px;' +
                 'background:' + self._colors.itemBg + ';cursor:pointer;display:flex;align-items:center;' +
                 'justify-content:space-between;transition:background 0.15s ease;';
 
@@ -701,7 +701,7 @@ var MusicSkill = {
                 'display:flex;align-items:center;justify-content:center;font-size:12px;' +
                 'transition:background 0.15s ease;flex-shrink:0;';
 
-            playBtn.addEventListener('mouseenter', function() { playBtn.style.background = self._colors.activeBtn; playBtn.style.color = '#3a2510'; });
+            playBtn.addEventListener('mouseenter', function() { playBtn.style.background = self._colors.activeBtn; playBtn.style.color = '#0c1929'; });
             playBtn.addEventListener('mouseleave', function() {
                 if (listNodeInfo.currentIndex !== index || !listNodeInfo.isPlaying) {
                     playBtn.style.background = self._colors.inactiveBtn;
@@ -859,7 +859,7 @@ var MusicSkill = {
                 if (i === index) {
                     btn.textContent = '停';
                     btn.style.background = self._colors.activeBtn;
-                    btn.style.color = '#3a2510';
+                    btn.style.color = '#0c1929';
                 } else {
                     btn.textContent = '播';
                     btn.style.background = self._colors.inactiveBtn;
@@ -887,12 +887,12 @@ var MusicSkill = {
             var btn = listNodeInfo.modeBtns[m];
             if (m === mode) {
                 btn.style.background = self._colors.activeBtn;
-                btn.style.color = '#3a2510';
+                btn.style.color = '#0c1929';
                 btn.style.borderColor = self._colors.accent;
             } else {
                 btn.style.background = self._colors.inactiveBtn;
                 btn.style.color = self._colors.text;
-                btn.style.borderColor = 'rgba(255,180,100,0.15)';
+                btn.style.borderColor = 'rgba(56,189,248,0.15)';
             }
         });
     },

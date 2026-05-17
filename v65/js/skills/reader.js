@@ -159,10 +159,10 @@ var ReaderSkill = {
         card.style.cssText = 'position:absolute;' +
             'left:' + cardX + 'px;top:' + cardY + 'px;' +
             'width:' + cardW + 'px;height:' + cardH + 'px;' +
-            'background:rgba(30,25,45,0.92);' +
-            'border:1px solid rgba(255,220,180,0.15);' +
-            'border-radius:10px;' +
-            'color:#e0d6c8;font-size:13px;' +
+            'background:rgba(15,25,50,0.92);' +
+            'border:1px solid rgba(100,160,255,0.15);' +
+            'border-radius:12px;' +
+            'color:#e8edf5;font-size:13px;' +
             'pointer-events:auto;overflow:hidden;' +
             'display:flex;flex-direction:column;' +
             'box-shadow:0 4px 20px rgba(0,0,0,0.4);';
@@ -170,12 +170,12 @@ var ReaderSkill = {
         // 头部：文件名 + 保存按钮 + 关闭按钮
         var header = document.createElement('div');
         header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;' +
-            'padding:6px 10px;background:rgba(255,220,180,0.06);' +
-            'border-bottom:1px solid rgba(255,220,180,0.1);' +
+            'padding:6px 10px;background:rgba(56,189,248,0.06);' +
+            'border-bottom:1px solid rgba(100,160,255,0.1);' +
             'cursor:grab;flex-shrink:0;';
 
         var title = document.createElement('span');
-        title.style.cssText = 'font-size:12px;font-weight:bold;color:#f0c878;' +
+        title.style.cssText = 'font-size:12px;font-weight:bold;color:#38bdf8;' +
             'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;margin-right:8px;';
         title.textContent = fileName;
         title.title = fileName;
@@ -213,9 +213,9 @@ var ReaderSkill = {
         });
 
         var closeBtn = document.createElement('span');
-        closeBtn.style.cssText = 'cursor:pointer;color:#aa8866;font-size:11px;' +
-            'padding:2px 6px;border-radius:4px;flex-shrink:0;' +
-            'border:1px solid rgba(170,136,102,0.3);transition:all 0.2s;';
+        closeBtn.style.cssText = 'cursor:pointer;color:#64748b;font-size:11px;' +
+            'padding:2px 6px;border-radius:6px;flex-shrink:0;' +
+            'border:1px solid rgba(100,160,255,0.3);transition:all 0.2s;';
         closeBtn.textContent = '关';
         closeBtn.title = '关闭';
 
@@ -225,7 +225,7 @@ var ReaderSkill = {
         });
         closeBtn.addEventListener('mouseleave', function() {
             closeBtn.style.background = '';
-            closeBtn.style.color = '#aa8866';
+            closeBtn.style.color = '#64748b';
         });
         closeBtn.addEventListener('click', function(e) {
             e.stopPropagation();

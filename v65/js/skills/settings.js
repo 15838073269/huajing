@@ -8,7 +8,7 @@
 var SettingsPanel = (function() {
 
     var _overlay = null;
-    var _defaultBgColor = '#1e1828';
+    var _defaultBgColor = '#0a0e1a';
     var DB_NAME = 'EditorSettingsDB';
     var DB_VER = 1;
     var STORE = 'settings';
@@ -148,79 +148,79 @@ var SettingsPanel = (function() {
 
         var panel = document.createElement('div');
         panel.style.cssText =
-            'background:rgba(50,42,35,0.98);border:1px solid rgba(240,180,100,0.25);' +
-            'border-radius:16px;padding:0;max-width:480px;width:90%;' +
+            'background:rgba(15,25,50,0.98);border:1px solid rgba(100,160,255,0.25);' +
+            'border-radius:18px;padding:0;max-width:480px;width:90%;' +
             'max-height:85vh;overflow:hidden;' +
-            'box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,220,160,0.08);' +
+            'box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(100,160,255,0.08);' +
             'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;' +
             'animation:settingsSlideIn 0.25s ease;';
 
         panel.innerHTML =
             '<div style="display:flex;align-items:center;justify-content:space-between;' +
-            'padding:16px 20px;background:rgba(240,160,80,0.1);border-bottom:1px solid rgba(240,180,100,0.15);">' +
-                '<span style="color:#f0c878;font-size:18px;font-weight:bold;">⚙️ 设置</span>' +
+            'padding:16px 20px;background:rgba(56,189,248,0.1);border-bottom:1px solid rgba(100,160,255,0.15);">' +
+                '<span style="color:#38bdf8;font-size:18px;font-weight:bold;">⚙️ 设置</span>' +
                 '<button id="settings-close-btn" style="background:rgba(220,80,60,0.2);border:1px solid rgba(220,80,60,0.3);' +
-                'color:#e87060;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;">✕ 关闭</button>' +
+                'color:#e87060;border-radius:10px;padding:6px 14px;cursor:pointer;font-size:13px;transition:all 0.15s;">✕ 关闭</button>' +
             '</div>' +
             '<div style="padding:20px;overflow-y:auto;max-height:calc(85vh - 60px);">' +
                 '<div style="margin-bottom:24px;">' +
-                    '<h3 style="color:#e8a040;margin:0 0 14px 0;font-size:15px;font-weight:bold;' +
-                    'border-bottom:1px solid rgba(240,180,100,0.15);padding-bottom:8px;">基本设置</h3>' +
+                    '<h3 style="color:#38bdf8;margin:0 0 14px 0;font-size:15px;font-weight:bold;' +
+                    'border-bottom:1px solid rgba(100,160,255,0.15);padding-bottom:8px;">基本设置</h3>' +
                     // 背景颜色
                     '<div style="display:flex;align-items:center;justify-content:space-between;' +
-                    'padding:14px 16px;background:rgba(30,25,20,0.6);border-radius:10px;' +
+                    'padding:14px 16px;background:rgba(10,18,35,0.6);border-radius:12px;' +
                     'border:1px solid rgba(255,255,255,0.06);margin-bottom:12px;">' +
                         '<div>' +
-                            '<div style="color:#f0e6d8;font-size:14px;font-weight:bold;">🎨 背景颜色</div>' +
-                            '<div style="color:#b0a090;font-size:12px;margin-top:2px;">自定义画布背景色</div>' +
+                            '<div style="color:#e8edf5;font-size:14px;font-weight:bold;">🎨 背景颜色</div>' +
+                            '<div style="color:#94a3b8;font-size:12px;margin-top:2px;">自定义画布背景色</div>' +
                         '</div>' +
                         '<div style="display:flex;align-items:center;gap:10px;">' +
                             '<input type="color" id="settings-bg-color" value="' + getBgColor() + '" ' +
-                            'style="width:44px;height:34px;border:2px solid rgba(240,180,100,0.25);border-radius:8px;' +
+                            'style="width:44px;height:34px;border:2px solid rgba(100,160,255,0.25);border-radius:10px;' +
                             'cursor:pointer;background:transparent;padding:0;">' +
-                            '<button id="settings-reset-color" style="background:rgba(240,180,100,0.12);' +
-                            'border:1px solid rgba(240,180,100,0.2);color:#f0c878;border-radius:8px;' +
-                            'padding:6px 12px;cursor:pointer;font-size:12px;">恢复默认</button>' +
+                            '<button id="settings-reset-color" style="background:rgba(56,189,248,0.12);' +
+                            'border:1px solid rgba(56,189,248,0.2);color:#38bdf8;border-radius:10px;' +
+                            'padding:6px 12px;cursor:pointer;font-size:12px;transition:all 0.15s;">恢复默认</button>' +
                         '</div>' +
                     '</div>' +
                     // 网格
                     '<div style="display:flex;align-items:center;justify-content:space-between;' +
-                    'padding:14px 16px;background:rgba(30,25,20,0.6);border-radius:10px;' +
+                    'padding:14px 16px;background:rgba(10,18,35,0.6);border-radius:12px;' +
                     'border:1px solid rgba(255,255,255,0.06);margin-bottom:12px;">' +
                         '<div>' +
-                            '<div style="color:#f0e6d8;font-size:14px;font-weight:bold;">📐 网格显示</div>' +
-                            '<div style="color:#b0a090;font-size:12px;margin-top:2px;">显示/隐藏背景参考网格</div>' +
+                            '<div style="color:#e8edf5;font-size:14px;font-weight:bold;">📐 网格显示</div>' +
+                            '<div style="color:#94a3b8;font-size:12px;margin-top:2px;">显示/隐藏背景参考网格</div>' +
                         '</div>' +
                         '<button id="settings-grid-toggle" style="padding:8px 20px;border:none;border-radius:20px;cursor:pointer;' +
                         'font-size:13px;font-weight:bold;transition:all 0.2s;' +
                         (isGridVisible()
-                            ? 'background:linear-gradient(135deg,#e8a040,#d08030);color:#fff;box-shadow:0 2px 10px rgba(232,160,64,0.4);'
-                            : 'background:rgba(100,90,80,0.5);color:#b0a090;box-shadow:0 2px 8px rgba(0,0,0,0.2);')
+                            ? 'background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;box-shadow:0 2px 10px rgba(56,189,248,0.4);'
+                            : 'background:rgba(71,85,105,0.5);color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,0.2);')
                         + '">' + (isGridVisible() ? '开启' : '关闭') + '</button>' +
                     '</div>' +
                     // 重置
                     '<div style="display:flex;align-items:center;justify-content:space-between;' +
-                    'padding:14px 16px;background:rgba(30,25,20,0.6);border-radius:10px;' +
+                    'padding:14px 16px;background:rgba(10,18,35,0.6);border-radius:12px;' +
                     'border:1px solid rgba(255,255,255,0.06);margin-bottom:12px;">' +
                         '<div>' +
-                            '<div style="color:#f0e6d8;font-size:14px;font-weight:bold;">🔄 重置设置</div>' +
-                            '<div style="color:#b0a090;font-size:12px;margin-top:2px;">恢复所有设置为默认值</div>' +
+                            '<div style="color:#e8edf5;font-size:14px;font-weight:bold;">🔄 重置设置</div>' +
+                            '<div style="color:#94a3b8;font-size:12px;margin-top:2px;">恢复所有设置为默认值</div>' +
                         '</div>' +
                         '<button id="settings-reset-all" style="background:rgba(220,80,60,0.15);' +
-                        'border:1px solid rgba(220,80,60,0.25);color:#e87060;border-radius:20px;' +
-                        'padding:8px 20px;cursor:pointer;font-size:13px;font-weight:bold;">重置</button>' +
+                        'border:1px solid rgba(220,80,60,0.25);color:#e87060;border-radius:22px;' +
+                        'padding:8px 20px;cursor:pointer;font-size:13px;font-weight:bold;transition:all 0.15s;">重置</button>' +
                     '</div>' +
                 '</div>' +
                 // 关于
                 '<div style="margin-bottom:16px;">' +
-                    '<h3 style="color:#e8a040;margin:0 0 14px 0;font-size:15px;font-weight:bold;' +
-                    'border-bottom:1px solid rgba(240,180,100,0.15);padding-bottom:8px;">关于</h3>' +
-                    '<div style="padding:16px;background:rgba(30,25,20,0.6);border-radius:10px;' +
+                    '<h3 style="color:#38bdf8;margin:0 0 14px 0;font-size:15px;font-weight:bold;' +
+                    'border-bottom:1px solid rgba(100,160,255,0.15);padding-bottom:8px;">关于</h3>' +
+                    '<div style="padding:16px;background:rgba(10,18,35,0.6);border-radius:12px;' +
                     'border:1px solid rgba(255,255,255,0.06);text-align:center;">' +
                         '<div style="font-size:28px;margin-bottom:8px;">🎨</div>' +
-                        '<div style="color:#f0c878;font-size:16px;font-weight:bold;margin-bottom:4px;">画境</div>' +
-                        '<div style="color:#b0a090;font-size:12px;margin-bottom:12px;">v65</div>' +
-                        '<div style="color:#807060;font-size:11px;">作者：兔师兄369</div>' +
+                        '<div style="color:#38bdf8;font-size:16px;font-weight:bold;margin-bottom:4px;">画境</div>' +
+                        '<div style="color:#94a3b8;font-size:12px;margin-bottom:12px;">v65</div>' +
+                        '<div style="color:#475569;font-size:11px;">作者：兔师兄369</div>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -255,15 +255,15 @@ var SettingsPanel = (function() {
             if (isGridVisible()) {
                 hideGrid();
                 this.textContent = '关闭';
-                this.style.background = 'rgba(100,90,80,0.5)';
-                this.style.color = '#b0a090';
+                this.style.background = 'rgba(71,85,105,0.5)';
+                this.style.color = '#94a3b8';
                 this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
             } else {
                 showGrid();
                 this.textContent = '开启';
-                this.style.background = 'linear-gradient(135deg,#e8a040,#d08030)';
+                this.style.background = 'linear-gradient(135deg,#38bdf8,#0ea5e9)';
                 this.style.color = '#fff';
-                this.style.boxShadow = '0 2px 10px rgba(232,160,64,0.4)';
+                this.style.boxShadow = '0 2px 10px rgba(56,189,248,0.4)';
             }
         });
 

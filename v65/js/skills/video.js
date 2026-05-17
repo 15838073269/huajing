@@ -53,16 +53,16 @@ var VideoSkill = {
     // 加载动画样式是否已注入
     _styleInjected: false,
 
-    // 暖色调配色
+    // 冷蓝配色
     _colors: {
-        bg: 'rgba(60, 40, 30, 0.92)',
-        border: 'rgba(255, 180, 100, 0.25)',
-        accent: '#e8a040',
-        accentHover: '#f0b860',
-        text: '#f0e6d8',
-        textMuted: '#b0a090',
-        progressBg: 'rgba(255, 180, 100, 0.15)',
-        progressFill: '#e8a040',
+        bg: 'rgba(15, 25, 50, 0.92)',
+        border: 'rgba(100, 160, 255, 0.25)',
+        accent: '#38bdf8',
+        accentHover: '#7dd3fc',
+        text: '#e8edf5',
+        textMuted: '#94a3b8',
+        progressBg: 'rgba(56, 189, 248, 0.15)',
+        progressFill: '#38bdf8',
         overlay: 'rgba(0, 0, 0, 0.6)'
     },
 
@@ -268,8 +268,8 @@ var VideoSkill = {
         style.textContent =
             '.vskill-loading-spinner {' +
             '  width: 36px; height: 36px;' +
-            '  border: 3px solid rgba(255,220,180,0.3);' +
-            '  border-top-color: #e8a040;' +
+            '  border: 3px solid rgba(56,189,248,0.3);' +
+            '  border-top-color: #38bdf8;' +
             '  border-radius: 50%;' +
             '  animation: vskill-spin 0.8s linear infinite;' +
             '}' +
@@ -277,7 +277,7 @@ var VideoSkill = {
             '  to { transform: rotate(360deg); }' +
             '}' +
             '.vskill-loading-text {' +
-            '  color: #f0e6d8; margin-top: 8px; font-size: 12px;' +
+            '  color: #e8edf5; margin-top: 8px; font-size: 12px;' +
             '}';
         document.head.appendChild(style);
     },

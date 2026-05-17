@@ -174,57 +174,58 @@ var NodeEditorSkill = {
         var style = document.createElement('style');
         style.id = 'ne-injected-styles';
         style.textContent = [
-            /* 节点容器 - 圆角 6px */
-            '.ne-node{position:absolute;min-width:160px;background:rgba(30,24,40,0.95);border:1.5px solid rgba(255,200,150,0.2);border-radius:6px;overflow:visible;user-select:none;transition:border-color 0.15s,box-shadow 0.15s;z-index:1;}',
+            /* 节点容器 - 圆角 8px */
+            '.ne-node{position:absolute;min-width:160px;background:rgba(15,25,50,0.95);border:1.5px solid rgba(100,160,255,0.2);border-radius:8px;overflow:visible;user-select:none;transition:border-color 0.15s,box-shadow 0.15s;z-index:1;}',
             '.ne-node:active{cursor:grabbing;}',
-            '.ne-node.ne-selected{border-color:#f0a050;box-shadow:0 0 16px rgba(240,160,80,0.3);}',
+            '.ne-node.ne-selected{border-color:#38bdf8;box-shadow:0 0 16px rgba(56,189,248,0.3);}',
             '.ne-node.ne-instance{border-color:rgba(176,144,224,0.35);border-style:dashed;}',
             '.ne-node.ne-instance.ne-selected{border-color:#b090e0;box-shadow:0 0 16px rgba(176,144,224,0.3);}',
 
             /* 标题栏 - flex 布局，标题不截断 */
-            '.ne-node-header{display:flex;align-items:center;padding:4px 8px;background:linear-gradient(135deg,rgba(240,160,80,0.12) 0%,rgba(240,160,80,0.04) 100%);border-bottom:1px solid rgba(255,220,180,0.1);border-radius:6px 6px 0 0;min-height:32px;cursor:grab;}',
+            '.ne-node-header{display:flex;align-items:center;padding:4px 8px;background:linear-gradient(135deg,rgba(56,189,248,0.12) 0%,rgba(56,189,248,0.04) 100%);border-bottom:1px solid rgba(100,160,255,0.1);border-radius:8px 8px 0 0;min-height:32px;cursor:grab;}',
             '.ne-node-header:active{cursor:grabbing;}',
             '.ne-instance .ne-node-header{background:linear-gradient(135deg,rgba(176,144,224,0.12) 0%,rgba(176,144,224,0.04) 100%);}',
 
             /* 标题文字 - flex:1 占满剩余空间，不截断 */
-            '.ne-node-title{flex:1;min-width:0;font-size:11px;font-weight:600;color:#f0a050;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+            '.ne-node-title{flex:1;min-width:0;font-size:11px;font-weight:600;color:#38bdf8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
             '.ne-instance .ne-node-title{color:#b090e0;}',
 
             /* 坐标 - 紧凑显示 */
-            '.ne-node-coords{font-size:9px;color:#6a5a4a;margin:0 4px;flex-shrink:0;font-family:"Cascadia Code","Fira Code",Consolas,monospace;}',
+            '.ne-node-coords{font-size:9px;color:#475569;margin:0 4px;flex-shrink:0;font-family:"Cascadia Code","Fira Code",Consolas,monospace;}',
 
             /* 工具按钮 - 紧凑小圆点设计，hover 显示 tooltip */
             '.ne-node-tools{display:flex;gap:2px;flex-shrink:0;margin-left:auto;}',
-            '.ne-node-tool{width:20px;height:20px;border:none;border-radius:50%;background:rgba(255,255,255,0.04);color:#b0a090;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;padding:0;line-height:1;position:relative;}',
-            '.ne-node-tool:hover{background:rgba(255,255,255,0.12);color:#f0e6d8;transform:scale(1.15);}',
+            '.ne-node-tool{width:20px;height:20px;border:none;border-radius:50%;background:rgba(255,255,255,0.04);color:#94a3b8;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;padding:0;line-height:1;position:relative;}',
+            '.ne-node-tool:hover{background:rgba(255,255,255,0.12);color:#e8edf5;transform:scale(1.15);}',
             '.ne-node-tool.ne-danger:hover{background:rgba(224,96,96,0.2);color:#e06060;}',
+            '.ne-node-tool:active{transform:scale(0.92);}',
 
             /* 编辑器区域 */
-            '.ne-editor-wrapper{display:flex;height:calc(100% - 32px);overflow:hidden;border-radius:0 0 6px 6px;}',
+            '.ne-editor-wrapper{display:flex;height:calc(100% - 32px);overflow:hidden;border-radius:0 0 8px 8px;}',
 
             /* 行号 - 与 textarea 完全同步的字体、行高、padding */
-            '.ne-line-numbers{min-width:32px;width:32px;padding:8px 4px 8px 6px;text-align:right;font-family:"Cascadia Code","Fira Code",Consolas,monospace;font-size:12px;line-height:1.6;color:#8a7a6a;background:rgba(0,0,0,0.15);overflow:hidden;user-select:none;border-right:1px solid rgba(255,220,180,0.06);}',
+            '.ne-line-numbers{min-width:32px;width:32px;padding:8px 4px 8px 6px;text-align:right;font-family:"Cascadia Code","Fira Code",Consolas,monospace;font-size:12px;line-height:1.6;color:#475569;background:rgba(0,0,0,0.15);overflow:hidden;user-select:none;border-right:1px solid rgba(100,160,255,0.06);}',
             '.ne-line-num{margin:0;padding:0;height:1.6em;line-height:1.6;display:block;}',
 
             /* textarea */
-            '.ne-code-input{flex:1;padding:8px 10px;border:none;outline:none;resize:none;background:transparent;color:#f0e6d8;font-size:12px;line-height:1.6;font-family:"Cascadia Code","Fira Code",Consolas,monospace;white-space:pre;overflow:auto;}',
-            '.ne-code-input::placeholder{color:#8a7a6a;}',
+            '.ne-code-input{flex:1;padding:8px 10px;border:none;outline:none;resize:none;background:transparent;color:#e8edf5;font-size:12px;line-height:1.6;font-family:"Cascadia Code","Fira Code",Consolas,monospace;white-space:pre;overflow:auto;}',
+            '.ne-code-input::placeholder{color:#475569;}',
 
             /* 端口 - Y 坐标在编辑区域中点 = calc(50% + 16px) */
-            '.ne-port{position:absolute;width:12px;height:12px;border-radius:50%;background:#f0a050;border:2px solid #1e1828;cursor:crosshair;transition:transform 0.15s,box-shadow 0.15s;z-index:5;}',
-            '.ne-port:hover{transform:translateY(-50%) scale(1.5);box-shadow:0 0 10px rgba(240,160,80,0.3);}',
+            '.ne-port{position:absolute;width:12px;height:12px;border-radius:50%;background:#38bdf8;border:2px solid #0f1932;cursor:crosshair;transition:transform 0.15s,box-shadow 0.15s;z-index:5;}',
+            '.ne-port:hover{transform:translateY(-50%) scale(1.5);box-shadow:0 0 10px rgba(56,189,248,0.3);}',
             '.ne-port-in{left:-6px;top:calc(50% + 16px);transform:translateY(-50%);}',
             '.ne-port-out{right:-6px;top:calc(50% + 16px);transform:translateY(-50%);}',
             '.ne-port-in:hover{transform:translateY(-50%) scale(1.5);}',
             '.ne-port-out:hover{transform:translateY(-50%) scale(1.5);}',
 
             /* 连线 */
-            '.ne-conn-path{fill:none;stroke:#f0a050;stroke-width:2;opacity:0.5;stroke-linecap:round;}',
+            '.ne-conn-path{fill:none;stroke:#38bdf8;stroke-width:2;opacity:0.5;stroke-linecap:round;}',
 
             /* 小地图 */
-            '.ne-minimap{position:fixed;bottom:80px;right:16px;width:140px;height:140px;background:rgba(30,24,40,0.9);border:1px solid rgba(255,220,180,0.12);border-radius:6px;overflow:hidden;z-index:8000;pointer-events:auto;box-shadow:0 4px 20px rgba(0,0,0,0.4);}',
+            '.ne-minimap{position:fixed;bottom:80px;right:16px;width:140px;height:140px;background:rgba(15,25,50,0.9);border:1px solid rgba(100,160,255,0.12);border-radius:8px;overflow:hidden;z-index:8000;pointer-events:auto;box-shadow:0 4px 20px rgba(0,0,0,0.4);}',
             '.ne-minimap canvas{width:100%;height:100%;}',
-            '.ne-minimap-viewport{position:absolute;border:1.5px solid rgba(240,160,80,0.6);border-radius:2px;pointer-events:none;background:rgba(240,160,80,0.05);}',
+            '.ne-minimap-viewport{position:absolute;border:1.5px solid rgba(56,189,248,0.6);border-radius:2px;pointer-events:none;background:rgba(56,189,248,0.05);}',
 
             /* 激光切割光标 */
             '.ne-cutting-cursor{cursor:crosshair !important;}'
@@ -305,7 +306,7 @@ var NodeEditorSkill = {
         }
 
         // 绘制连接线
-        ctx.strokeStyle = 'rgba(240,160,80,0.3)';
+        ctx.strokeStyle = 'rgba(56,189,248,0.3)';
         ctx.lineWidth = 0.5;
         for (var i = 0; i < this._conns.length; i++) {
             var c = this._conns[i];
@@ -1353,8 +1354,8 @@ var NodeEditorSkill = {
     _showOverlay: function(title, content) {
         if (typeof showOverlay === 'function') {
             var safeContent = content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            var html = '<pre style="white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px;line-height:1.6;color:#f0e6d8;margin:0;max-height:50vh;overflow-y:auto;">' + safeContent + '</pre>' +
-                '<button onclick="var ta=document.createElement(\'textarea\');ta.style.cssText=\'position:fixed;opacity:0;\';ta.value=this.dataset.code;document.body.appendChild(ta);ta.select();document.execCommand(\'copy\');document.body.removeChild(ta);this.textContent=\'\u5DF2\u590D\u5236!\';this.style.background=\'rgba(128,216,160,0.2)\';setTimeout(function(){this.textContent=\'\u590D\u5236\u4EE3\u7801\';this.style.background=\'rgba(240,160,80,0.12)\';}.bind(this),1500);" data-code="' + safeContent.replace(/"/g,'&quot;') + '" style="margin-top:10px;padding:6px 16px;border:1px solid rgba(255,200,150,0.2);border-radius:8px;background:rgba(240,160,80,0.12);color:#f0a050;font-size:11px;cursor:pointer;font-family:inherit;">\u590D\u5236\u4EE3\u7801</button>';
+            var html = '<pre style="white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px;line-height:1.6;color:#e8edf5;margin:0;max-height:50vh;overflow-y:auto;">' + safeContent + '</pre>' +
+                '<button onclick="var ta=document.createElement(\'textarea\');ta.style.cssText=\'position:fixed;opacity:0;\';ta.value=this.dataset.code;document.body.appendChild(ta);ta.select();document.execCommand(\'copy\');document.body.removeChild(ta);this.textContent=\'\u5DF2\u590D\u5236!\';this.style.background=\'rgba(128,216,160,0.2)\';setTimeout(function(){this.textContent=\'\u590D\u5236\u4EE3\u7801\';this.style.background=\'rgba(56,189,248,0.12)\';}.bind(this),1500);" data-code="' + safeContent.replace(/"/g,'&quot;') + '" style="margin-top:10px;padding:6px 16px;border:1px solid rgba(100,160,255,0.2);border-radius:8px;background:rgba(56,189,248,0.12);color:#38bdf8;font-size:11px;cursor:pointer;font-family:inherit;">\u590D\u5236\u4EE3\u7801</button>';
             showOverlay(title, html, '600px');
         }
     },

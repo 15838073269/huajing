@@ -923,10 +923,10 @@ var CalculatorSkill = {
             'position:absolute;' +
             'left:' + x + 'px;top:' + y + 'px;' +
             'width:300px;' +
-            'background:rgba(50,42,35,0.95);' +
-            'border:1px solid rgba(240,180,100,0.25);' +
-            'border-radius:12px;' +
-            'box-shadow:0 4px 20px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,220,160,0.1);' +
+            'background:rgba(15,25,50,0.95);' +
+            'border:1px solid rgba(100,160,255,0.25);' +
+            'border-radius:14px;' +
+            'box-shadow:0 4px 20px rgba(0,0,0,0.4),inset 0 1px 0 rgba(100,160,255,0.1);' +
             'pointer-events:auto;' +
             'user-select:none;' +
             'z-index:50;' +
@@ -935,27 +935,27 @@ var CalculatorSkill = {
 
         card.innerHTML =
             '<div style="display:flex;align-items:center;justify-content:space-between;' +
-            'padding:8px 12px;background:rgba(240,160,80,0.12);border-bottom:1px solid rgba(240,180,100,0.15);' +
+            'padding:8px 12px;background:rgba(56,189,248,0.12);border-bottom:1px solid rgba(100,160,255,0.15);' +
             'cursor:grab;">' +
-                '<span class="calc-title" style="color:#f0c878;font-size:13px;font-weight:bold;">' + this._cards.length + 1 + '</span>' +
+                '<span class="calc-title" style="color:#38bdf8;font-size:13px;font-weight:bold;">' + this._cards.length + 1 + '</span>' +
                 '<div style="display:flex;gap:6px;">' +
-                    '<button class="calc-help-btn" style="background:rgba(240,180,100,0.15);border:1px solid rgba(240,180,100,0.2);' +
-                    'color:#f0c878;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;">帮</button>' +
+                    '<button class="calc-help-btn" style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.2);' +
+                    'color:#38bdf8;border-radius:10px;padding:2px 8px;font-size:11px;cursor:pointer;transition:all 0.15s;">帮</button>' +
                     '<button class="calc-close-btn" style="background:rgba(220,80,60,0.2);border:1px solid rgba(220,80,60,0.3);' +
-                    'color:#e87060;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;">关</button>' +
+                    'color:#e87060;border-radius:10px;padding:2px 8px;font-size:11px;cursor:pointer;transition:all 0.15s;">关</button>' +
                 '</div>' +
             '</div>' +
             '<div style="padding:10px 12px;">' +
                 '<textarea class="calc-input" placeholder="输入表达式，如: 2^10 + sin(30)" ' +
                 'style="width:100%;box-sizing:border-box;padding:8px 10px;min-height:60px;resize:vertical;' +
-                'background:rgba(30,25,20,0.8);border:1px solid rgba(240,180,100,0.2);' +
-                'border-radius:8px;color:#f0e6d8;font-size:14px;outline:none;' +
+                'background:rgba(10,18,35,0.8);border:1px solid rgba(100,160,255,0.2);' +
+                'border-radius:10px;color:#e8edf5;font-size:14px;outline:none;' +
                 'font-family:"Courier New",monospace;transition:border-color 0.2s;line-height:1.5;"></textarea>' +
                 '<div class="calc-result" style="margin-top:8px;padding:8px 10px;min-height:40px;max-height:120px;overflow-y:auto;' +
-                'background:rgba(30,25,20,0.6);border-radius:8px;color:#a0e8a0;font-size:15px;' +
+                'background:rgba(10,18,35,0.6);border-radius:10px;color:#a0e8a0;font-size:15px;' +
                 'font-family:"Courier New",monospace;word-break:break-all;cursor:pointer;' +
                 'transition:background 0.2s;" title="点击复制结果"></div>' +
-                '<div class="calc-vars" style="margin-top:6px;font-size:11px;color:#b0a090;max-height:60px;overflow-y:auto;"></div>' +
+                '<div class="calc-vars" style="margin-top:6px;font-size:11px;color:#94a3b8;max-height:60px;overflow-y:auto;"></div>' +
             '</div>';
 
         this._layer.appendChild(card);
@@ -978,10 +978,10 @@ var CalculatorSkill = {
 
         // 输入框聚焦样式
         input.addEventListener('focus', function() {
-            this.style.borderColor = 'rgba(240,180,100,0.5)';
+            this.style.borderColor = 'rgba(56,189,248,0.5)';
         });
         input.addEventListener('blur', function() {
-            this.style.borderColor = 'rgba(240,180,100,0.2)';
+            this.style.borderColor = 'rgba(100,160,255,0.2)';
         });
 
         // 实时计算
@@ -1005,7 +1005,7 @@ var CalculatorSkill = {
             if (!text || text === '...') return;
             navigator.clipboard.writeText(text).then(function() {
                 var orig = resultDiv.style.background;
-                resultDiv.style.background = 'rgba(240,180,100,0.2)';
+                resultDiv.style.background = 'rgba(56,189,248,0.2)';
                 resultDiv.textContent = '已复制!';
                 setTimeout(function() {
                     resultDiv.style.background = orig;
@@ -1051,7 +1051,7 @@ var CalculatorSkill = {
 
         if (!text) {
             resultDiv.textContent = '...';
-            resultDiv.style.color = '#b0a090';
+            resultDiv.style.color = '#94a3b8';
             return;
         }
 
@@ -1074,7 +1074,7 @@ var CalculatorSkill = {
 
         if (results.length === 0) {
             resultDiv.textContent = '...';
-            resultDiv.style.color = '#b0a090';
+            resultDiv.style.color = '#94a3b8';
         } else {
             resultDiv.textContent = results.join('\n');
             resultDiv.style.color = hasError ? '#e8a060' : '#a0e8a0';
@@ -1161,21 +1161,21 @@ var CalculatorSkill = {
 
         var dialog = document.createElement('div');
         dialog.style.cssText =
-            'background:rgba(50,42,35,0.98);border:1px solid rgba(240,180,100,0.3);' +
+            'background:rgba(15,25,50,0.98);border:1px solid rgba(100,160,255,0.3);' +
             'border-radius:14px;padding:24px;max-width:560px;width:90%;' +
-            'max-height:80vh;overflow-y:auto;color:#f0e6d8;font-size:13px;' +
+            'max-height:80vh;overflow-y:auto;color:#e8edf5;font-size:13px;' +
             'box-shadow:0 8px 40px rgba(0,0,0,0.5);' +
             'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
         dialog.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-                '<h2 style="margin:0;color:#f0c878;font-size:18px;">🧮 计算器帮助</h2>' +
-                '<button id="calc-help-close" style="background:rgba(220,80,60,0.2);border:1px solid rgba(220,80,60,0.3);' +
-                'color:#e87060;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:13px;">关闭</button>' +
+                '<h2 style="margin:0;color:#38bdf8;font-size:18px;">🧮 计算器帮助</h2>' +
+                '<button id="calc-help-close" style="background:rgba(56,189,248,0.2);border:1px solid rgba(56,189,248,0.3);' +
+                'color:#38bdf8;border-radius:10px;padding:4px 12px;cursor:pointer;font-size:13px;transition:all 0.15s;">关闭</button>' +
             '</div>' +
 
             '<div style="margin-bottom:16px;">' +
-                '<h3 style="color:#e8a040;margin:0 0 8px 0;font-size:14px;">基本运算符</h3>' +
+                '<h3 style="color:#38bdf8;margin:0 0 8px 0;font-size:14px;">基本运算符</h3>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">' +
                     '<div><code style="color:#a0e8a0;">+</code> 加法 (1+2)</div>' +
                     '<div><code style="color:#a0e8a0;">-</code> 减法 (3-1)</div>' +
@@ -1188,7 +1188,7 @@ var CalculatorSkill = {
             '</div>' +
 
             '<div style="margin-bottom:16px;">' +
-                '<h3 style="color:#e8a040;margin:0 0 8px 0;font-size:14px;">比较运算符</h3>' +
+                '<h3 style="color:#38bdf8;margin:0 0 8px 0;font-size:14px;">比较运算符</h3>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">' +
                     '<div><code style="color:#a0e8a0;">==</code> 等于</div>' +
                     '<div><code style="color:#a0e8a0;">!=</code> 不等于</div>' +
@@ -1200,7 +1200,7 @@ var CalculatorSkill = {
             '</div>' +
 
             '<div style="margin-bottom:16px;">' +
-                '<h3 style="color:#e8a040;margin:0 0 8px 0;font-size:14px;">数学函数</h3>' +
+                '<h3 style="color:#38bdf8;margin:0 0 8px 0;font-size:14px;">数学函数</h3>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">' +
                     '<div><code style="color:#80c8f0;">sin(x)</code> 正弦(角度制)</div>' +
                     '<div><code style="color:#80c8f0;">cos(x)</code> 余弦(角度制)</div>' +
@@ -1218,13 +1218,13 @@ var CalculatorSkill = {
             '</div>' +
 
             '<div style="margin-bottom:16px;">' +
-                '<h3 style="color:#e8a040;margin:0 0 8px 0;font-size:14px;">常数</h3>' +
-                '<div><code style="color:#f0c878;">e</code> 自然常数 (~2.71828)　　<code style="color:#f0c878;">pi</code> 圆周率 (~3.14159)</div>' +
+                '<h3 style="color:#38bdf8;margin:0 0 8px 0;font-size:14px;">常数</h3>' +
+                '<div><code style="color:#38bdf8;">e</code> 自然常数 (~2.71828)　　<code style="color:#38bdf8;">pi</code> 圆周率 (~3.14159)</div>' +
             '</div>' +
 
             '<div style="margin-bottom:16px;">' +
-                '<h3 style="color:#e8a040;margin:0 0 8px 0;font-size:14px;">变量赋值</h3>' +
-                '<div style="background:rgba(30,25,20,0.6);padding:10px;border-radius:8px;font-family:monospace;">' +
+                '<h3 style="color:#38bdf8;margin:0 0 8px 0;font-size:14px;">变量赋值</h3>' +
+                '<div style="background:rgba(10,18,35,0.6);padding:10px;border-radius:10px;font-family:monospace;">' +
                     '<div><code style="color:#a0e8a0;">x = 100</code></div>' +
                     '<div><code style="color:#a0e8a0;">y = x * 2</code></div>' +
                     '<div><code style="color:#a0e8a0;">result = sin(45) + y</code></div>' +
@@ -1232,13 +1232,13 @@ var CalculatorSkill = {
             '</div>' +
 
             '<div>' +
-                '<h3 style="color:#e8a040;margin:0 0 8px 0;font-size:14px;">使用示例</h3>' +
-                '<div style="background:rgba(30,25,20,0.6);padding:10px;border-radius:8px;font-family:monospace;">' +
-                    '<div><code style="color:#f0e6d8;">1+2*3</code> <span style="color:#b0a090;">= 7</span></div>' +
-                    '<div><code style="color:#f0e6d8;">(1+2)*3</code> <span style="color:#b0a090;">= 9</span></div>' +
-                    '<div><code style="color:#f0e6d8;">sin(30)</code> <span style="color:#b0a090;">= 0.5</span></div>' +
-                    '<div><code style="color:#f0e6d8;">2^10+4</code> <span style="color:#b0a090;">= 1028</span></div>' +
-                    '<div><code style="color:#f0e6d8;">5!-10</code> <span style="color:#b0a090;">= 110</span></div>' +
+                '<h3 style="color:#38bdf8;margin:0 0 8px 0;font-size:14px;">使用示例</h3>' +
+                '<div style="background:rgba(10,18,35,0.6);padding:10px;border-radius:10px;font-family:monospace;">' +
+                    '<div><code style="color:#e8edf5;">1+2*3</code> <span style="color:#94a3b8;">= 7</span></div>' +
+                    '<div><code style="color:#e8edf5;">(1+2)*3</code> <span style="color:#94a3b8;">= 9</span></div>' +
+                    '<div><code style="color:#e8edf5;">sin(30)</code> <span style="color:#94a3b8;">= 0.5</span></div>' +
+                    '<div><code style="color:#e8edf5;">2^10+4</code> <span style="color:#94a3b8;">= 1028</span></div>' +
+                    '<div><code style="color:#e8edf5;">5!-10</code> <span style="color:#94a3b8;">= 110</span></div>' +
                 '</div>' +
             '</div>';
 

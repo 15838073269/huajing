@@ -14,6 +14,8 @@ var PLUGIN_LIST = [
     'js/skills/nav-bookmarks.js',   // 🧭 导航网址 - 网址收藏+标签分类
 
     // === 图片处理 ===
+    'js/skills/audio-cleaner.js',   // 🎧 音频清理 - 导入音频+自动降噪剪辑+导出
+    'js/skills/nine-slice.js',      // ✂️ 九宫格切片 - 拖拽彩线调整边距+实时预览+导出
     'js/skills/image-crop.js',      // ✂️ 图片裁剪 - 宽高比预设+旋转+网格
     'js/skills/mp42sprites.js',     // 🎬 视频抽帧 - 帧提取+预览+下载
     'js/skills/tile-tool.js',       // 🖼️ 素材拆分合并 - 矩形/异形拆分+合并拼图
@@ -33,6 +35,9 @@ var PLUGIN_LIST = [
 
     // === 像素画 ===
     'js/skills/pixel-paint.js',  // 像素画 - 数字像素绘画系统
+
+    // === 动画 ===
+    'js/skills/spine-animate.js', // 🦴 骨骼动画 - FK/IK/约束/缓动/弹性物理
 ];
 
 /**
@@ -53,5 +58,8 @@ var PLUGIN_NUMBERS = {
     'drawing': 11,
     'folder-browser': 12,
     'node-editor': 13,
-    'pixel-paint': 14
+    'pixel-paint': 14,
+    'spine-animate': 15,
+    'audio-cleaner': 16,
+    'nine-slice': 17
 };

@@ -122,9 +122,10 @@ var MyPlugin = {
     _createElement: function(x, y, text) {
         var el = document.createElement('div');
         el.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;' +
-            'padding:12px 20px;background:rgba(45,38,55,0.9);' +
-            'border:1px solid rgba(255,220,180,0.15);border-radius:10px;' +
-            'color:#f0e6d8;font-size:13px;pointer-events:auto;user-select:none;';
+            'padding:12px 20px;background:rgba(15,25,50,0.85);' +
+            'border:1px solid rgba(100,160,255,0.15);border-radius:12px;' +
+            'color:#e8edf5;font-size:13px;pointer-events:auto;user-select:none;' +
+            'backdrop-filter:blur(24px) saturate(180%);';
         el.textContent = text || '示例元素 #' + (this._elements.length + 1);
 
         // ✅ 关键：标记插件ID，点击时自动切换工具栏

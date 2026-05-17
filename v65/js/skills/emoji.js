@@ -165,8 +165,8 @@ var EmojiSkill = {
 
         // 大小滑块
         var sizeSlider = '<input type="range" id="emoji-size-slider" min="20" max="120" value="' + this._emojiSize + '" ' +
-            'style="width:80px;vertical-align:middle;cursor:pointer;accent-color:#e8a040;">' +
-            '<span id="emoji-size-label" style="color:#f0e6d8;font-size:12px;margin-left:4px;">' + this._emojiSize + 'px</span>';
+            'style="width:80px;vertical-align:middle;cursor:pointer;accent-color:#38bdf8;">' +
+            '<span id="emoji-size-label" style="color:#e8edf5;font-size:12px;margin-left:4px;">' + this._emojiSize + 'px</span>';
 
         return [
             {
@@ -259,32 +259,32 @@ var EmojiSkill = {
 
         this._menuPanel = document.createElement('div');
         this._menuPanel.style.cssText = 'position:fixed;top:80px;right:20px;width:360px;max-height:500px;' +
-            'background:rgba(45,38,55,0.95);border:1px solid rgba(255,200,120,0.2);' +
-            'border-radius:12px;overflow:hidden;z-index:10000;display:none;' +
-            'box-shadow:0 8px 32px rgba(0,0,0,0.4);font-family:system-ui,sans-serif;';
+            'background:rgba(15,25,50,0.85);border:1px solid rgba(100,160,255,0.15);' +
+            'border-radius:16px;overflow:hidden;z-index:10000;display:none;' +
+            'box-shadow:0 8px 32px rgba(0,0,0,0.4);font-family:system-ui,sans-serif;backdrop-filter:blur(24px) saturate(180%);';
 
         // 分类标签栏
         var tabBar = document.createElement('div');
         tabBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;' +
-            'background:rgba(30,25,40,0.8);border-bottom:1px solid rgba(255,200,120,0.1);';
+            'background:rgba(10,15,35,0.7);border-bottom:1px solid rgba(100,160,255,0.1);';
 
         this._categories.forEach(function(cat) {
             var tab = document.createElement('button');
             tab.textContent = cat.name;
             tab.dataset.category = cat.id;
-            tab.style.cssText = 'padding:4px 10px;border:1px solid rgba(255,200,120,0.15);' +
-                'border-radius:6px;background:rgba(60,50,75,0.6);color:#f0e6d8;font-size:12px;' +
+            tab.style.cssText = 'padding:4px 10px;border:1px solid rgba(100,160,255,0.15);' +
+                'border-radius:6px;background:rgba(20,30,60,0.65);color:#e8edf5;font-size:12px;' +
                 'cursor:pointer;transition:all 0.2s ease;';
             tab.addEventListener('mouseenter', function() {
                 if (self._currentCategory !== cat.id) {
-                    tab.style.background = 'rgba(232,160,64,0.2)';
-                    tab.style.borderColor = 'rgba(232,160,64,0.4)';
+                    tab.style.background = 'rgba(56,189,248,0.12)';
+                    tab.style.borderColor = 'rgba(56,189,248,0.25)';
                 }
             });
             tab.addEventListener('mouseleave', function() {
                 if (self._currentCategory !== cat.id) {
-                    tab.style.background = 'rgba(60,50,75,0.6)';
-                    tab.style.borderColor = 'rgba(255,200,120,0.15)';
+                    tab.style.background = 'rgba(20,30,60,0.65)';
+                    tab.style.borderColor = 'rgba(100,160,255,0.15)';
                 }
             });
             tab.addEventListener('click', function(e) {
@@ -320,13 +320,13 @@ var EmojiSkill = {
         var self = this;
         tabs.forEach(function(tab) {
             if (tab.dataset.category === self._currentCategory) {
-                tab.style.background = 'rgba(232,160,64,0.3)';
-                tab.style.borderColor = 'rgba(232,160,64,0.6)';
-                tab.style.color = '#ffd080';
+                tab.style.background = 'rgba(56,189,248,0.15)';
+                tab.style.borderColor = 'rgba(56,189,248,0.3)';
+                tab.style.color = '#38bdf8';
             } else {
-                tab.style.background = 'rgba(60,50,75,0.6)';
-                tab.style.borderColor = 'rgba(255,200,120,0.15)';
-                tab.style.color = '#f0e6d8';
+                tab.style.background = 'rgba(20,30,60,0.65)';
+                tab.style.borderColor = 'rgba(100,160,255,0.15)';
+                tab.style.color = '#e8edf5';
             }
         });
     },
@@ -357,15 +357,15 @@ var EmojiSkill = {
             var btn = document.createElement('button');
             btn.textContent = emoji;
             btn.style.cssText = 'width:36px;height:36px;border:none;border-radius:8px;' +
-                'background:rgba(68,68,68,0.8);cursor:pointer;transition:all 0.2s ease;' +
+                'background:rgba(20,30,60,0.65);cursor:pointer;transition:all 0.2s ease;' +
                 'font-size:22px;display:flex;align-items:center;justify-content:center;';
             btn.addEventListener('mouseenter', function() {
                 btn.style.transform = 'scale(1.2)';
-                btn.style.background = 'rgba(232,160,64,0.4)';
+                btn.style.background = 'rgba(56,189,248,0.25)';
             });
             btn.addEventListener('mouseleave', function() {
                 btn.style.transform = 'scale(1)';
-                btn.style.background = 'rgba(68,68,68,0.8)';
+                btn.style.background = 'rgba(20,30,60,0.65)';
             });
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -594,7 +594,7 @@ var EmojiSkill = {
         this._deselectEmoji();
 
         this._selectedElement = el;
-        el.style.outline = '2px solid rgba(232,160,64,0.8)';
+        el.style.outline = '2px solid rgba(56,189,248,0.8)';
         el.style.outlineOffset = '4px';
         el.style.borderRadius = '4px';
     },

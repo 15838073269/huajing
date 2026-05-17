@@ -103,38 +103,39 @@ var ImageCropSkill = {
 
     _getCSS: function() {
         return [
-            '.ic-overlay { position:fixed; width:860px; height:560px; z-index:9999; display:flex; flex-direction:column; background:#0f3460; color:#eee; font-family:"Segoe UI",system-ui,sans-serif; border-radius:10px; box-shadow:0 8px 40px rgba(0,0,0,.6); overflow:hidden; user-select:none; resize:both; min-width:600px; min-height:400px; transition:opacity 0.15s; }',
-            '.ic-header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; background:#16213e; border-bottom:1px solid #333; flex-shrink:0; cursor:move; user-select:none; }',
-            '.ic-header h1 { font-size:16px; background:linear-gradient(135deg,#e94560,#ff6b9d); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0; }',
-            '.ic-close-btn { background:rgba(220,80,60,.2); border:1px solid rgba(220,80,60,.3); color:#e87060; border-radius:6px; padding:5px 14px; cursor:pointer; font-size:13px; }',
+            '.ic-overlay { position:fixed; width:860px; height:560px; z-index:9999; display:flex; flex-direction:column; background:rgba(15,25,50,0.95); color:#e8edf5; font-family:"Segoe UI",system-ui,sans-serif; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,.6); overflow:hidden; user-select:none; resize:both; min-width:600px; min-height:400px; transition:opacity 0.15s; }',
+            '.ic-header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; background:rgba(20,35,70,0.8); border-bottom:1px solid rgba(100,160,255,0.15); flex-shrink:0; cursor:move; user-select:none; }',
+            '.ic-header h1 { font-size:16px; background:linear-gradient(135deg,#38bdf8,#7dd3fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0; }',
+            '.ic-close-btn { background:rgba(220,80,60,.2); border:1px solid rgba(220,80,60,.3); color:#e87060; border-radius:8px; padding:5px 14px; cursor:pointer; font-size:13px; transition:all 0.15s; }',
             '.ic-close-btn:hover { background:rgba(220,80,60,.4); }',
             '.ic-app { display:flex; flex:1; overflow:hidden; min-height:0; }',
-            '.ic-sidebar { width:240px; min-width:240px; background:#16213e; border-right:1px solid #333; overflow-y:auto; padding:12px; }',
+            '.ic-sidebar { width:240px; min-width:240px; background:rgba(20,35,70,0.6); border-right:1px solid rgba(100,160,255,0.15); overflow-y:auto; padding:12px; }',
             '.ic-main { flex:1; display:flex; align-items:center; justify-content:center; overflow:auto; position:relative; background:repeating-conic-gradient(rgba(255,255,255,.03) 0% 25%,transparent 0% 50%) 0 0/20px 20px; min-width:0; }',
-            '.ic-section { margin-bottom:14px; padding:10px; border:1px dashed #444; border-radius:8px; background:rgba(255,255,255,.02); }',
-            '.ic-section-title { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#aaa; margin-bottom:7px; display:flex; align-items:center; gap:6px; }',
-            '.ic-section-title::before { content:""; width:3px; height:12px; background:#e94560; border-radius:2px; }',
-            '.ic-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 14px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:500; transition:.2s; }',
-            '.ic-btn-primary { background:#e94560; color:#fff; }',
-            '.ic-btn-primary:hover { background:#d63851; transform:translateY(-1px); }',
-            '.ic-btn-secondary { background:rgba(255,255,255,.08); color:#eee; border:1px solid #333; }',
+            '.ic-section { margin-bottom:14px; padding:10px; border:1px dashed rgba(100,160,255,0.2); border-radius:10px; background:rgba(255,255,255,.02); }',
+            '.ic-section-title { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; margin-bottom:7px; display:flex; align-items:center; gap:6px; }',
+            '.ic-section-title::before { content:""; width:3px; height:12px; background:#38bdf8; border-radius:2px; }',
+            '.ic-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-size:12px; font-weight:500; transition:all 0.15s; }',
+            '.ic-btn-primary { background:#38bdf8; color:#fff; }',
+            '.ic-btn-primary:hover { background:#0ea5e9; transform:translateY(-1px); }',
+            '.ic-btn:active { transform:scale(0.92); }',
+            '.ic-btn-secondary { background:rgba(255,255,255,.08); color:#e8edf5; border:1px solid rgba(100,160,255,0.15); }',
             '.ic-btn-secondary:hover { background:rgba(255,255,255,.12); }',
             '.ic-btn-sm { padding:5px 10px; font-size:11px; }',
             '.ic-btn-group { display:flex; gap:4px; flex-wrap:wrap; }',
             '.ic-btn-group .ic-btn { flex:1; min-width:0; }',
-            '.ic-btn-group .ic-btn.active { background:#e94560; color:#fff; border-color:#e94560; }',
-            '.ic-infobar { display:flex; align-items:center; justify-content:space-between; padding:6px 16px; background:#16213e; border-top:1px solid #333; font-size:11px; color:#aaa; flex-shrink:0; }',
-            '.ic-infobar .ic-val { color:#e94560; font-weight:600; }',
-            '.ic-canvas-wrap { position:relative; display:inline-block; overflow:hidden; background:rgba(0,0,0,.3); border-radius:4px; }',
+            '.ic-btn-group .ic-btn.active { background:#38bdf8; color:#fff; border-color:#38bdf8; }',
+            '.ic-infobar { display:flex; align-items:center; justify-content:space-between; padding:6px 16px; background:rgba(20,35,70,0.8); border-top:1px solid rgba(100,160,255,0.15); font-size:11px; color:#94a3b8; flex-shrink:0; }',
+            '.ic-infobar .ic-val { color:#38bdf8; font-weight:600; }',
+            '.ic-canvas-wrap { position:relative; display:inline-block; overflow:hidden; background:rgba(0,0,0,.3); border-radius:6px; }',
             '.ic-canvas-wrap canvas { display:block; }',
             '.ic-crop-mask { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }',
-            '.ic-crop-box { position:absolute; border:2px solid #e94560; background:transparent; cursor:move; z-index:2; box-shadow:0 0 0 9999px rgba(0,0,0,.55); }',
+            '.ic-crop-box { position:absolute; border:2px solid #38bdf8; background:transparent; cursor:move; z-index:2; box-shadow:0 0 0 9999px rgba(0,0,0,.55); }',
             '.ic-grid { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }',
-            '.ic-resize-handle { position:absolute; width:14px; height:14px; background:rgba(15,52,96,.9); border:2px solid #e94560; border-radius:50%; box-sizing:border-box; box-shadow:0 2px 6px rgba(0,0,0,.4); transition:transform .15s; z-index:3; }',
-            '.ic-empty { display:flex; align-items:center; justify-content:center; height:100%; color:#666; font-size:14px; }',
+            '.ic-resize-handle { position:absolute; width:14px; height:14px; background:rgba(15,52,96,.9); border:2px solid #38bdf8; border-radius:50%; box-sizing:border-box; box-shadow:0 2px 6px rgba(0,0,0,.4); transition:transform .15s; z-index:3; }',
+            '.ic-empty { display:flex; align-items:center; justify-content:center; height:100%; color:#475569; font-size:14px; }',
             '::-webkit-scrollbar { width:6px; }',
             '::-webkit-scrollbar-track { background:transparent; }',
-            '::-webkit-scrollbar-thumb { background:#333; border-radius:3px; }'
+            '::-webkit-scrollbar-thumb { background:rgba(56,189,248,0.2); border-radius:3px; }'
         ].join('\n');
     },
 
@@ -240,7 +241,7 @@ var ImageCropSkill = {
                 '<div class="ic-section-title">旋转</div>' +
                 '<div style="display:flex;gap:4px">' +
                     '<button class="ic-btn ic-btn-sm" id="icRotLeft" style="flex:1">&larr;90&deg;</button>' +
-                    '<span id="icRotVal" style="flex:1;text-align:center;line-height:28px;color:#e94560;font-size:13px">0&deg;</span>' +
+                    '<span id="icRotVal" style="flex:1;text-align:center;line-height:28px;color:#38bdf8;font-size:13px">0&deg;</span>' +
                     '<button class="ic-btn ic-btn-sm" id="icRotRight" style="flex:1">&rarr;90&deg;</button>' +
                 '</div>' +
                 '<button class="ic-btn ic-btn-sm" id="icRotReset" style="width:100%;margin-top:4px">恢复角度</button>' +
@@ -807,7 +808,7 @@ var ImageCropSkill = {
             var line = document.createElement('div');
             line.style.cssText = 'position:absolute;' +
                 (isH ? 'left:0;right:0;height:1px;' : 'top:0;bottom:0;width:1px;') +
-                'background:#e94560;opacity:0.7;pointer-events:none;z-index:3;';
+                'background:#38bdf8;opacity:0.7;pointer-events:none;z-index:3;';
             gc.appendChild(line);
             return line;
         }
@@ -816,10 +817,10 @@ var ImageCropSkill = {
             st.gridLines = { h1: makeLine(true), h2: makeLine(true), v1: makeLine(false), v2: makeLine(false) };
         } else if (st.gridType === 'diagonal') {
             var d1 = document.createElement('div');
-            d1.style.cssText = 'position:absolute;top:0;left:0;width:141%;height:1px;background:#e94560;opacity:0.7;pointer-events:none;z-index:3;transform-origin:0 0;transform:rotate(45deg);';
+            d1.style.cssText = 'position:absolute;top:0;left:0;width:141%;height:1px;background:#38bdf8;opacity:0.7;pointer-events:none;z-index:3;transform-origin:0 0;transform:rotate(45deg);';
             gc.appendChild(d1);
             var d2 = document.createElement('div');
-            d2.style.cssText = 'position:absolute;top:0;right:0;width:141%;height:1px;background:#e94560;opacity:0.7;pointer-events:none;z-index:3;transform-origin:100% 0;transform:rotate(-45deg);';
+            d2.style.cssText = 'position:absolute;top:0;right:0;width:141%;height:1px;background:#38bdf8;opacity:0.7;pointer-events:none;z-index:3;transform-origin:100% 0;transform:rotate(-45deg);';
             gc.appendChild(d2);
             st.gridLines = { d1: d1, d2: d2 };
         }

@@ -550,12 +550,12 @@ var NavBookmarksSkill = {
 
         /* 面板 */
         '.nb-manager { position:fixed;z-index:99998;' +
-            'background:rgba(20,20,30,.95);color:#eee;border-radius:12px;' +
+            'background:rgba(15,20,35,.95);color:#e8edf5;border-radius:14px;' +
             'box-shadow:0 8px 32px rgba(0,0,0,.6);overflow:hidden;' +
             'border:1px solid rgba(255,255,255,.08);' +
             'display:flex;flex-direction:column;user-select:none; }' +
         '.nb-mgr-header { display:flex;justify-content:space-between;align-items:center;' +
-            'padding:8px 14px;background:rgba(255,180,50,.1);border-bottom:1px solid rgba(255,180,50,.15);' +
+            'padding:8px 14px;background:rgba(56,189,248,.1);border-bottom:1px solid rgba(100,160,255,.15);' +
             'cursor:move;font-size:13px;font-weight:600;color:#e2e8f0;flex-shrink:0; }' +
         '.nb-mgr-header-btns { display:flex;align-items:center;gap:4px; }' +
         '.nb-hdr-btn { padding:2px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);' +
@@ -575,7 +575,7 @@ var NavBookmarksSkill = {
         '.nb-tag-item { display:flex;align-items:center;justify-content:space-between;' +
             'padding:7px 12px;cursor:pointer;transition:all .15s;font-size:12px;color:#94a3b8;gap:4px; }' +
         '.nb-tag-item:hover { background:rgba(255,255,255,.05);color:#cbd5e1; }' +
-        '.nb-tag-item.active { background:rgba(255,180,50,.1);color:#fbbf24;border-right:2px solid #fbbf24; }' +
+        '.nb-tag-item.active { background:rgba(56,189,248,.1);color:#38bdf8;border-right:2px solid #38bdf8; }' +
         '.nb-tag-name { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }' +
         '.nb-tag-count { font-size:10px;color:#475569;background:rgba(255,255,255,.05);' +
             'padding:1px 6px;border-radius:8px;flex-shrink:0; }' +
@@ -585,14 +585,14 @@ var NavBookmarksSkill = {
         '.nb-tag-item:hover .nb-tag-del { display:block; }' +
         '.nb-btn-add-tag { margin:4px;padding:6px;font-size:11px; }' +
         '.nb-tag-input { width:calc(100% - 8px);margin:4px;box-sizing:border-box;' +
-            'background:rgba(0,0,0,.3);border:1px solid rgba(255,180,50,.3);border-radius:4px;' +
+            'background:rgba(0,0,0,.3);border:1px solid rgba(56,189,248,.3);border-radius:6px;' +
             'color:#e2e8f0;padding:6px 8px;font-size:11px;outline:none;font-family:inherit; }' +
-        '.nb-tag-input:focus { border-color:rgba(255,180,50,.5); }' +
+        '.nb-tag-input:focus { border-color:rgba(56,189,248,.5); }' +
         '.nb-tag-input::placeholder { color:#475569; }' +
 
         /* 分隔条 */
         '.nb-resizer { width:4px;cursor:col-resize;background:transparent;flex-shrink:0;transition:background .15s; }' +
-        '.nb-resizer:hover, .nb-resizer:active { background:rgba(255,180,50,.3); }' +
+        '.nb-resizer:hover, .nb-resizer:active { background:rgba(56,189,248,.3); }' +
 
         /* 右侧 */
         '.nb-main { flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden; }' +
@@ -601,7 +601,7 @@ var NavBookmarksSkill = {
         '.nb-add-input { flex:1;min-width:0;background:rgba(0,0,0,.3);' +
             'border:1px solid rgba(255,255,255,.08);border-radius:6px;color:#e2e8f0;' +
             'padding:6px 8px;font-size:11px;font-family:inherit;transition:border-color .15s; }' +
-        '.nb-add-input:focus { outline:none;border-color:rgba(255,180,50,.4); }' +
+        '.nb-add-input:focus { outline:none;border-color:rgba(56,189,248,.4); }' +
         '.nb-add-input::placeholder { color:#475569; }' +
 
         /* 网格 */
@@ -612,8 +612,8 @@ var NavBookmarksSkill = {
 
         /* 卡片 */
         '.nb-card { background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);' +
-            'border-radius:8px;padding:10px;position:relative;transition:all .15s;overflow:hidden; }' +
-        '.nb-card:hover { background:rgba(255,255,255,.06);border-color:rgba(255,180,50,.15); }' +
+            'border-radius:10px;padding:10px;position:relative;transition:all .15s;overflow:hidden; }' +
+        '.nb-card:hover { background:rgba(255,255,255,.06);border-color:rgba(56,189,248,.15); }' +
         '.nb-card-link { display:block;text-decoration:none;color:inherit;cursor:pointer; }' +
         '.nb-card-name { font-size:12px;font-weight:600;color:#e2e8f0;margin-bottom:4px;' +
             'overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }' +
@@ -627,21 +627,21 @@ var NavBookmarksSkill = {
         /* 卡片标签 */
         '.nb-card-tags { display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;align-items:center;position:relative; }' +
         '.nb-card-tag { display:inline-flex;align-items:center;gap:2px;padding:1px 6px;' +
-            'background:rgba(255,180,50,.08);border:1px solid rgba(255,180,50,.15);' +
-            'border-radius:3px;color:#fbbf24;font-size:10px;cursor:default; }' +
+            'background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.15);' +
+            'border-radius:5px;color:#38bdf8;font-size:10px;cursor:default; }' +
         '.nb-card-tag-del { background:none;border:none;color:#475569;font-size:11px;cursor:pointer;' +
             'padding:0 1px;line-height:1;transition:color .15s; }' +
         '.nb-card-tag-del:hover { color:#f87171; }' +
-        '.nb-card-tag-add { background:none;border:1px dashed rgba(255,255,255,.1);border-radius:3px;' +
+        '.nb-card-tag-add { background:none;border:1px dashed rgba(255,255,255,.1);border-radius:5px;' +
             'color:#475569;font-size:10px;cursor:pointer;padding:1px 5px;transition:all .15s; }' +
         '.nb-card-tag-add:hover { color:#94a3b8;border-color:rgba(255,255,255,.2); }' +
 
         /* 标签下拉菜单 */
         '.nb-tag-menu { position:absolute;left:0;bottom:100%;margin-bottom:2px;z-index:10;' +
-            'background:rgba(30,30,40,.98);border:1px solid rgba(255,255,255,.1);border-radius:6px;' +
+            'background:rgba(15,20,35,.98);border:1px solid rgba(100,160,255,.1);border-radius:8px;' +
             'box-shadow:0 4px 16px rgba(0,0,0,.5);min-width:80px;overflow:hidden; }' +
         '.nb-tag-menu-item { padding:6px 12px;font-size:11px;color:#cbd5e1;cursor:pointer;transition:background .15s; }' +
-        '.nb-tag-menu-item:hover { background:rgba(255,180,50,.12);color:#fbbf24; }' +
+        '.nb-tag-menu-item:hover { background:rgba(56,189,248,.12);color:#38bdf8; }' +
 
         /* 拖拽手柄 */
         '.nb-resize-handle { position:absolute;right:0;bottom:0;width:16px;height:16px;' +
@@ -651,14 +651,15 @@ var NavBookmarksSkill = {
 
         /* 滚动条 */
         '.nb-grid::-webkit-scrollbar, .nb-tag-list::-webkit-scrollbar { width:3px; }' +
-        '.nb-grid::-webkit-scrollbar-thumb, .nb-tag-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08);border-radius:2px; }' +
+        '.nb-grid::-webkit-scrollbar-thumb, .nb-tag-list::-webkit-scrollbar-thumb { background:rgba(56,189,248,.15);border-radius:2px; }' +
 
         /* 通用按钮 */
         '.nb-btn { padding:3px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);' +
-            'color:#94a3b8;border-radius:5px;cursor:pointer;font-size:10px;transition:all .15s; }' +
+            'color:#94a3b8;border-radius:7px;cursor:pointer;font-size:10px;transition:all .15s; }' +
         '.nb-btn:hover { background:rgba(255,255,255,.1);color:#e2e8f0; }' +
-        '.nb-btn-primary { background:rgba(255,180,50,.15);border-color:rgba(255,180,50,.25);color:#fbbf24; }' +
-        '.nb-btn-primary:hover { background:rgba(255,180,50,.28); }' +
+        '.nb-btn:active { transform:scale(0.92); }' +
+        '.nb-btn-primary { background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.25);color:#38bdf8; }' +
+        '.nb-btn-primary:hover { background:rgba(56,189,248,.28); }' +
         '.nb-btn-add-tag { background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);color:#64748b; }' +
         '.nb-btn-add-tag:hover { background:rgba(255,255,255,.06);color:#94a3b8; }';
 

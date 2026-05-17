@@ -24,7 +24,7 @@ var DrawingSkill = {
     // ===== 内部状态 =====
     _world: null,
     _currentTool: null,       // 'brush' | 'eraser' | null
-    _brushColor: '#e8a040',
+    _brushColor: '#38bdf8',
     _brushSize: 3,
     _paths: [],               // 已完成的路径数据
     _currentPath: null,       // 当前正在绘制的路径
@@ -80,13 +80,13 @@ var DrawingSkill = {
 
         // 颜色选择器 HTML
         var colorPicker = '<input type="color" id="drawing-color-picker" value="' + this._brushColor + '" ' +
-            'style="width:28px;height:28px;border:2px solid rgba(255,220,180,0.3);border-radius:6px;' +
+            'style="width:28px;height:28px;border:2px solid rgba(100,160,255,0.3);border-radius:8px;' +
             'cursor:pointer;background:transparent;padding:0;">';
 
         // 粗细滑块 HTML
         var sizeSlider = '<input type="range" id="drawing-size-slider" min="1" max="99" value="' + this._brushSize + '" ' +
-            'style="width:80px;vertical-align:middle;cursor:pointer;accent-color:#e8a040;">' +
-            '<span id="drawing-size-label" style="color:#f0e6d8;font-size:12px;margin-left:4px;">' + this._brushSize + 'px</span>';
+            'style="width:80px;vertical-align:middle;cursor:pointer;accent-color:#38bdf8;">' +
+            '<span id="drawing-size-label" style="color:#e8edf5;font-size:12px;margin-left:4px;">' + this._brushSize + 'px</span>';
 
         return [
             {
@@ -131,7 +131,7 @@ var DrawingSkill = {
 
     load: function(data) {
         if (!data) return;
-        this._brushColor = data.brushColor || '#e8a040';
+        this._brushColor = data.brushColor || '#38bdf8';
         this._brushSize = data.brushSize || 3;
         this._currentTool = data.currentTool || 'brush';
 

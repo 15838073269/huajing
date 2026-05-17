@@ -967,79 +967,82 @@ var PixelPaint3D = (function() {
         return '' +
         /* 模式切换（左侧顶部） */
         '.pp3d-tools{padding:6px 8px;}' +
-        '.pp3d-mode-toggle{display:flex;gap:2px;background:#0a0a1a;border-radius:4px;padding:2px;}' +
-        '.pp3d-mode-btn{flex:1;padding:4px 0;border:1px solid #333;border-radius:3px;background:#1a1a2e;color:#888;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;}' +
-        '.pp3d-mode-btn:hover{color:#ccc;}' +
-        '.pp3d-mode-btn.active{background:#2ecc71;color:#fff;border-color:#2ecc71;}' +
+        '.pp3d-mode-toggle{display:flex;gap:2px;background:rgba(10,15,35,0.7);border-radius:6px;padding:2px;backdrop-filter:blur(24px) saturate(180%);}' +
+        '.pp3d-mode-btn{flex:1;padding:4px 0;border:1px solid rgba(100,160,255,0.15);border-radius:6px;background:rgba(20,30,60,0.65);color:#94a3b8;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;}' +
+        '.pp3d-mode-btn:hover{color:#e8edf5;transform:translateY(-1px);}' +
+        '.pp3d-mode-btn.active{background:#38bdf8;color:#fff;border-color:#38bdf8;}' +
 
         /* 3D工具栏 */
-        '.pp3d-toolbar{display:flex;align-items:center;gap:6px;padding:4px 8px;background:#0d1117;border-bottom:1px solid #1a3a2e;flex-shrink:0;flex-wrap:wrap;}' +
-        '.pp3d-action-btn{padding:3px 8px;border:1px solid #2ecc7144;border-radius:4px;background:#2ecc7118;color:#2ecc71;cursor:pointer;font-size:10px;font-family:inherit;transition:all .15s;white-space:nowrap;}' +
-        '.pp3d-action-btn:hover{background:#2ecc7133;border-color:#2ecc71;}' +
-        '.pp3d-action-btn.pp3d-danger{color:#e94560;border-color:#e9456044;background:#e9456018;}' +
-        '.pp3d-action-btn.pp3d-danger:hover{background:#e9456033;border-color:#e94560;}' +
+        '.pp3d-toolbar{display:flex;align-items:center;gap:6px;padding:4px 8px;background:rgba(10,15,35,0.7);border-bottom:1px solid rgba(100,160,255,0.1);flex-shrink:0;flex-wrap:wrap;backdrop-filter:blur(24px) saturate(180%);}' +
+        '.pp3d-action-btn{padding:3px 8px;border:1px solid rgba(56,189,248,0.27);border-radius:6px;background:rgba(56,189,248,0.09);color:#38bdf8;cursor:pointer;font-size:10px;font-family:inherit;transition:all .15s;white-space:nowrap;}' +
+        '.pp3d-action-btn:hover{background:rgba(56,189,248,0.2);border-color:#38bdf8;transform:translateY(-1px);}' +
+        '.pp3d-action-btn.pp3d-danger{color:#e94560;border-color:rgba(233,69,96,0.27);background:rgba(233,69,96,0.09);}' +
+        '.pp3d-action-btn.pp3d-danger:hover{background:rgba(233,69,96,0.2);border-color:#e94560;}' +
 
         /* 导入区域 */
         '.pp3d-import-section{display:flex;gap:4px;padding:4px 6px;flex-wrap:wrap;}' +
-        '.pp3d-import-section button{background:#0f3460;color:#aaa;border:1px solid #1a3a6a;padding:3px 8px;border-radius:3px;font-size:11px;cursor:pointer;font-family:inherit;}' +
-        '.pp3d-import-section button:hover{border-color:#e94560;color:#e94560;}' +
+        '.pp3d-import-section button{background:rgba(100,160,255,0.15);color:#94a3b8;border:1px solid rgba(100,160,255,0.2);padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;}' +
+        '.pp3d-import-section button:hover{border-color:#e94560;color:#e94560;transform:translateY(-1px);}' +
 
         /* 面切换区域 */
         '.pp3d-face-section{display:flex;align-items:center;gap:3px;padding:4px 6px;flex-wrap:wrap;}' +
-        '.pp3d-face-label{font-size:10px;color:#888;margin-right:2px;}' +
-        '.pp3d-face-btn{padding:2px 6px;border:1px solid #333;border-radius:3px;background:#1a1a2e;color:#aaa;cursor:pointer;font-size:10px;font-family:inherit;transition:all .15s;}' +
-        '.pp3d-face-btn:hover{border-color:#2ecc71;color:#2ecc71;}' +
-        '.pp3d-face-btn.active{background:#2ecc71;color:#fff;border-color:#2ecc71;}' +
+        '.pp3d-face-label{font-size:10px;color:#94a3b8;margin-right:2px;}' +
+        '.pp3d-face-btn{padding:2px 6px;border:1px solid rgba(100,160,255,0.15);border-radius:6px;background:rgba(20,30,60,0.65);color:#94a3b8;cursor:pointer;font-size:10px;font-family:inherit;transition:all .15s;}' +
+        '.pp3d-face-btn:hover{border-color:#38bdf8;color:#38bdf8;transform:translateY(-1px);}' +
+        '.pp3d-face-btn.active{background:#38bdf8;color:#fff;border-color:#38bdf8;}' +
 
         /* 缩放区域 */
         '.pp3d-scale-section{display:flex;align-items:center;gap:4px;padding:4px 6px;flex-wrap:wrap;}' +
-        '.pp3d-scale-label{font-size:10px;color:#888;}' +
+        '.pp3d-scale-label{font-size:10px;color:#94a3b8;}' +
         '.pp3d-scale-val{font-size:10px;color:#e94560;min-width:30px;text-align:center;}' +
 
         /* 操作按钮区域 */
         '.pp3d-actions{display:flex;gap:4px;padding:4px 6px;}' +
 
         /* 3D预览面板 */
-        '.pp3d-preview-panel{flex:1;min-width:0;background:#0d0d1a;display:flex;flex-direction:column;overflow:hidden;}' +
-        '.pp3d-preview-header{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:#0a0a18;border-bottom:1px solid #1a1a3e;flex-shrink:0;flex-wrap:wrap;gap:3px;}' +
-        '.pp3d-preview-title{font-size:11px;color:#2ecc71;font-weight:bold;}' +
+        '.pp3d-preview-panel{flex:1;min-width:0;background:rgba(10,15,35,0.7);display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(24px) saturate(180%);}' +
+        '.pp3d-preview-header{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:rgba(10,15,35,0.7);border-bottom:1px solid rgba(100,160,255,0.1);flex-shrink:0;flex-wrap:wrap;gap:3px;backdrop-filter:blur(24px) saturate(180%);}' +
+        '.pp3d-preview-title{font-size:11px;color:#38bdf8;font-weight:bold;}' +
         '.pp3d-view-btns{display:flex;gap:2px;flex-wrap:wrap;}' +
-        '.pp3d-view-btn{padding:1px 5px;border:1px solid #333;border-radius:3px;background:#1a1a2e;color:#888;cursor:pointer;font-size:9px;font-family:inherit;transition:all .15s;}' +
-        '.pp3d-view-btn:hover{color:#2ecc71;border-color:#2ecc7166;}' +
+        '.pp3d-view-btn{padding:1px 5px;border:1px solid rgba(100,160,255,0.15);border-radius:6px;background:rgba(20,30,60,0.65);color:#94a3b8;cursor:pointer;font-size:9px;font-family:inherit;transition:all .15s;}' +
+        '.pp3d-view-btn:hover{color:#38bdf8;border-color:rgba(56,189,248,0.4);transform:translateY(-1px);}' +
         '.pp3d-preview-canvas-wrap{flex:1;overflow:hidden;position:relative;min-height:100px;}' +
         '.pp3d-preview-canvas-wrap canvas{width:100%;height:100%;display:block;}' +
-        '.pp3d-preview-info{padding:3px 8px;font-size:9px;color:#555;border-top:1px solid #1a1a3e;flex-shrink:0;text-align:center;}' +
+        '.pp3d-preview-info{padding:3px 8px;font-size:9px;color:#475569;border-top:1px solid rgba(100,160,255,0.1);flex-shrink:0;text-align:center;}' +
 
         /* 图片分配UI */
-        '.pp3d-assign-ui{background:#16213e;border:1px solid #0f3460;border-radius:6px;padding:8px;margin:4px;}' +
+        '.pp3d-assign-ui{background:rgba(15,25,50,0.7);border:1px solid rgba(100,160,255,0.15);border-radius:16px;padding:8px;margin:4px;backdrop-filter:blur(24px) saturate(180%);}' +
         '.pp3d-assign-title{font-size:12px;color:#e94560;font-weight:bold;margin-bottom:6px;}' +
         '.pp3d-assign-grid{display:flex;flex-wrap:wrap;gap:6px;}' +
-        '.pp3d-assign-card{display:flex;flex-direction:column;align-items:center;gap:3px;background:#0d0d1a;border:1px solid #333;border-radius:4px;padding:4px;}' +
-        '.pp3d-assign-thumb{width:60px;height:60px;object-fit:contain;border-radius:3px;background:#0a0a1a;}' +
-        '.pp3d-assign-face{background:#0a0a1a;border:1px solid #333;color:#e0e0e0;padding:2px 4px;border-radius:3px;font-size:11px;font-family:inherit;width:100%;}' +
-        '.pp3d-assign-face option:disabled{color:#555;}' +
-        '.pp3d-assign-btn{background:#e94560;color:#fff;border:none;padding:4px 12px;border-radius:3px;font-size:11px;cursor:pointer;margin-top:6px;font-family:inherit;}' +
-        '.pp3d-assign-btn:hover{background:#c73850;}' +
+        '.pp3d-assign-card{display:flex;flex-direction:column;align-items:center;gap:3px;background:rgba(10,15,35,0.7);border:1px solid rgba(100,160,255,0.15);border-radius:6px;padding:4px;}' +
+        '.pp3d-assign-thumb{width:60px;height:60px;object-fit:contain;border-radius:6px;background:rgba(10,15,35,0.7);}' +
+        '.pp3d-assign-face{background:rgba(10,15,35,0.7);border:1px solid rgba(100,160,255,0.15);color:#e8edf5;padding:2px 4px;border-radius:6px;font-size:11px;font-family:inherit;width:100%;}' +
+        '.pp3d-assign-face option:disabled{color:#475569;}' +
+        '.pp3d-assign-btn{background:#e94560;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;margin-top:6px;font-family:inherit;transition:all .15s;}' +
+        '.pp3d-assign-btn:hover{background:rgba(220,80,60,0.6);transform:translateY(-1px);}' +
 
         /* 展开图预览 */
-        '.pp3d-sprite-preview{position:absolute;top:10px;left:10px;z-index:100;background:#16213e;border:1px solid #0f3460;border-radius:6px;padding:4px;max-width:90%;max-height:90%;overflow:auto;}' +
+        '.pp3d-sprite-preview{position:absolute;top:10px;left:10px;z-index:100;background:rgba(15,25,50,0.7);border:1px solid rgba(100,160,255,0.15);border-radius:16px;padding:4px;max-width:90%;max-height:90%;overflow:auto;backdrop-filter:blur(24px) saturate(180%);}' +
         '.pp3d-sprite-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#e94560;font-size:16px;cursor:pointer;padding:0 4px;}' +
         '.pp3d-sprite-preview img{max-width:100%;max-height:70vh;display:block;image-rendering:pixelated;}' +
 
         /* 面属性浮动面板 */
-        '.pp3d-face-props{position:absolute;bottom:8px;right:8px;z-index:50;background:rgba(13,13,30,0.92);border:1px solid #333;border-radius:6px;padding:0;width:200px;box-shadow:0 4px 12px rgba(0,0,0,0.5);}' +
-        '.pp3d-props-header{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-bottom:1px solid #222;}' +
-        '.pp3d-props-title{font-size:10px;color:#2ecc71;font-weight:bold;}' +
-        '.pp3d-props-close{background:none;border:none;color:#666;font-size:14px;cursor:pointer;line-height:1;padding:0 2px;}' +
+        '.pp3d-face-props{position:absolute;bottom:8px;right:8px;z-index:50;background:rgba(10,15,35,0.85);border:1px solid rgba(100,160,255,0.15);border-radius:16px;padding:0;width:200px;box-shadow:0 4px 12px rgba(0,0,0,0.5);backdrop-filter:blur(24px) saturate(180%);}' +
+        '.pp3d-props-header{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-bottom:1px solid rgba(100,160,255,0.1);}' +
+        '.pp3d-props-title{font-size:10px;color:#38bdf8;font-weight:bold;}' +
+        '.pp3d-props-close{background:none;border:none;color:#94a3b8;font-size:14px;cursor:pointer;line-height:1;padding:0 2px;}' +
         '.pp3d-props-close:hover{color:#e94560;}' +
         '.pp3d-props-body{padding:4px 6px;}' +
         '.pp3d-prop-row{display:flex;align-items:center;gap:3px;margin-bottom:2px;}' +
-        '.pp3d-prop-row label{font-size:9px;color:#888;min-width:16px;text-align:right;}' +
-        '.pp3d-prop-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;background:#333;border-radius:2px;outline:none;margin:0;}' +
+        '.pp3d-prop-row label{font-size:9px;color:#94a3b8;min-width:16px;text-align:right;}' +
+        '.pp3d-prop-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;background:rgba(100,160,255,0.15);border-radius:2px;outline:none;margin:0;}' +
         '.pp3d-prop-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:#e94560;border-radius:50%;cursor:pointer;}' +
         '.pp3d-prop-row span{font-size:9px;color:#e94560;min-width:20px;text-align:right;}' +
-        '.pp3d-props-reset{width:100%;margin-top:3px;padding:2px 0;border:1px solid #333;border-radius:3px;background:#1a1a2e;color:#888;font-size:9px;cursor:pointer;font-family:inherit;}' +
-        '.pp3d-props-reset:hover{color:#2ecc71;border-color:#2ecc7166;}'
+        '.pp3d-props-reset{width:100%;margin-top:3px;padding:2px 0;border:1px solid rgba(100,160,255,0.15);border-radius:6px;background:rgba(20,30,60,0.65);color:#94a3b8;font-size:9px;cursor:pointer;font-family:inherit;transition:all .15s;}' +
+        '.pp3d-props-reset:hover{color:#38bdf8;border-color:rgba(56,189,248,0.4);transform:translateY(-1px);}' +
+
+        /* 按钮通用 active 反馈 */
+        '.pp3d-mode-btn:active,.pp3d-action-btn:active,.pp3d-face-btn:active,.pp3d-view-btn:active,.pp3d-assign-btn:active,.pp3d-props-reset:active,.pp3d-import-section button:active{transform:scale(0.92);}'
     }
 
     // ---- 显示面属性面板 ----

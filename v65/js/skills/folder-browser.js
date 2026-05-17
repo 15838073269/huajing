@@ -489,8 +489,8 @@ var FolderBrowserSkill = {
         panel.style.cssText =
             'position:fixed;left:10px;top:' + (this._panelCounter * 20 + 60) + 'px;' +
             'width:280px;height:340px;' +
-            'background:rgba(35,30,40,0.96);border:1px solid rgba(255,200,150,0.12);' +
-            'border-radius:12px;z-index:1002;pointer-events:auto;' +
+            'background:rgba(15,25,50,0.96);border:1px solid rgba(100,160,255,0.12);' +
+            'border-radius:14px;z-index:1002;pointer-events:auto;' +
             'display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
 
         // 头部
@@ -957,10 +957,10 @@ var FolderBrowserSkill = {
         '@keyframes fbFadeIn { from { opacity:0; } to { opacity:1; } }' +
         '.fb-folder-panel::-webkit-scrollbar { width:4px; }' +
         '.fb-folder-panel::-webkit-scrollbar-track { background:transparent; }' +
-        '.fb-folder-panel::-webkit-scrollbar-thumb { background:rgba(255,200,150,0.2);border-radius:2px; }' +
-        '.fb-folder-panel::-webkit-scrollbar-thumb:hover { background:rgba(255,200,150,0.4); }' +
+        '.fb-folder-panel::-webkit-scrollbar-thumb { background:rgba(56,189,248,0.2);border-radius:2px; }' +
+        '.fb-folder-panel::-webkit-scrollbar-thumb:hover { background:rgba(56,189,248,0.4); }' +
         '.fb-image-grid::-webkit-scrollbar { width:4px; }' +
         '.fb-image-grid::-webkit-scrollbar-track { background:transparent; }' +
-        '.fb-image-grid::-webkit-scrollbar-thumb { background:rgba(255,200,150,0.15);border-radius:2px; }';
+        '.fb-image-grid::-webkit-scrollbar-thumb { background:rgba(56,189,248,0.15);border-radius:2px; }';
     document.head.appendChild(style);
 })();
