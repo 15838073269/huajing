@@ -8,7 +8,7 @@
  *   - 帧缩放控制
  *   - 帧选择/全选/清空
  *   - 选中帧缩放控制
- *   - 选中帧上行/下行分组（拖拽）
+ *   - 选中帧自由拖拽排序
  *   - 选中帧预览播放
  *   - 背景抠图模式
  *   - 下载序列图条
@@ -29,13 +29,12 @@ var Mp42SpritesSkill = {
     _overlay: null,
     _frames: [],
     _selectedFrames: [],
-    _frameRows: [],
-    _isPlaying: false,
-    _animationId: null,
-    _currentFrameIndex: 0,
+
     _hiddenVideo: null,
-    _previewCanvas: null,
-    _previewCtx: null,
+    _origPreviewCanvas: null,
+    _origPreviewCtx: null,
+    _procPreviewCanvas: null,
+    _procPreviewCtx: null,
     _draggedItem: null,
     _draggedOrder: null,
     _frameZoom: 1,
@@ -61,9 +60,7 @@ var Mp42SpritesSkill = {
     getSubTools: function() {
         var self = this;
         return [
-            { label: '全选/取消', action: function() { self._toggleSelectAll(); } },
-            { label: '播放选中', action: function() { self._playSelectedFrames(); } },
-            { label: '下载序列图', action: function() { self._downloadStrip(); } }
+            { label: '全选/取消', action: function() { self._toggleSelectAll(); } }
         ];
     },
 
@@ -94,146 +91,93 @@ var Mp42SpritesSkill = {
         header.innerHTML = '<h1>视频转序列图</h1><button class="ms-close-btn" id="msCloseBtn">关</button>';
         panel.appendChild(header);
 
-        // 主体：左右布局
+        // 主体：2列2行 grid，左列播放器与右列内容对应行等高
         var body = document.createElement('div');
         body.className = 'ms-body';
 
-        // === 左侧工具栏 ===
-        var sidebar = document.createElement('div');
-        sidebar.className = 'ms-sidebar';
-        sidebar.innerHTML =
-            '<div class="ms-sidebar-section">' +
-                '<div class="ms-sidebar-title">上传</div>' +
+        // ---- 第1行左列：原图帧播放器 ----
+        var leftTop = document.createElement('div');
+        leftTop.className = 'ms-grid-cell ms-left-top';
+        leftTop.innerHTML =
+            '<div class="ms-cell-header">原图帧播放' +
+                '<button class="ms-sm-btn ms-btn-primary" id="msPlayOrigBtn" disabled>播放</button>' +
+            '</div>' +
+            '<div class="ms-cell-body">' +
+                '<canvas class="ms-play-canvas" id="msOrigPreview"></canvas>' +
+            '</div>';
+        body.appendChild(leftTop);
+
+        // ---- 第1行右列：上传 + 进度 + 帧信息 + 帧网格 ----
+        var rightTop = document.createElement('div');
+        rightTop.className = 'ms-grid-cell ms-right-top';
+        rightTop.innerHTML =
+            '<div id="msProgressWrap" class="ms-progress-wrap" style="display:none">' +
+                '<div class="ms-progress-bar"><div class="ms-progress-fill" id="msProgressFill">0%</div></div>' +
+            '</div>' +
+            '<div class="ms-upload-area">' +
                 '<input type="file" id="msVideoInput" accept="video/*" style="display:none;">' +
-                '<button class="ms-sidebar-btn ms-btn-primary" id="msUploadBtn">上传视频</button>' +
+                '<button class="ms-upload-btn" id="msUploadBtn">上传视频</button>' +
             '</div>' +
-            '<div class="ms-sidebar-section">' +
-                '<div class="ms-sidebar-title">帧缩放</div>' +
-                '<input type="range" id="msFrameZoom" min="0.5" max="3" step="0.25" value="1" class="ms-slider">' +
-                '<div class="ms-slider-label"><span id="msFrameZoomVal">1x</span></div>' +
-            '</div>' +
-            '<div class="ms-sidebar-section">' +
-                '<div class="ms-sidebar-title">选中帧缩放</div>' +
-                '<input type="range" id="msSelectedZoom" min="0.5" max="3" step="0.25" value="1" class="ms-slider">' +
-                '<div class="ms-slider-label"><span id="msSelectedZoomVal">1x</span></div>' +
-            '</div>' +
-            '<div class="ms-sidebar-section">' +
-                '<div class="ms-sidebar-title">操作</div>' +
-                '<button class="ms-sidebar-btn ms-btn-warning" id="msClearBtn" disabled>清空选择</button>' +
-                '<button class="ms-sidebar-btn ms-btn-primary" id="msPlayBtn" disabled>播放选中</button>' +
-            '</div>' +
-            '<div class="ms-sidebar-section">' +
-                '<div class="ms-sidebar-title">导出</div>' +
-                '<label class="ms-checkbox-label">' +
-                    '<input type="checkbox" id="msMattingMode" checked> 背景抠图' +
-                '</label>' +
-                '<button class="ms-sidebar-btn ms-btn-success" id="msDownloadBtn" disabled>下载序列图</button>' +
+            '<div class="ms-frames-info" id="msFramesInfo">请上传视频文件</div>' +
+            '<div class="ms-frames-section" id="msFramesSection" style="display:none">' +
+                '<div class="ms-section-header">' +
+                    '<span class="ms-section-title">序列帧列表</span>' +
+                    '<div class="ms-hdr-controls">' +
+                        '<span class="ms-hdr-label">缩放</span>' +
+                        '<input type="range" id="msFrameZoom" min="0.5" max="3" step="0.25" value="1" class="ms-hdr-slider">' +
+                        '<span class="ms-hdr-val" id="msFrameZoomVal">1x</span>' +
+                        '<button class="ms-sm-btn ms-btn-primary" id="msSelectAllBtn">全选</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="ms-frames-grid" id="msFramesGrid"></div>' +
             '</div>';
-        body.appendChild(sidebar);
+        body.appendChild(rightTop);
 
-        // === 右侧内容区 ===
-        var main = document.createElement('div');
-        main.className = 'ms-main';
-
-        // 进度条
-        var progressWrap = document.createElement('div');
-        progressWrap.className = 'ms-progress-wrap';
-        progressWrap.id = 'msProgressWrap';
-        progressWrap.style.display = 'none';
-        progressWrap.innerHTML =
-            '<div class="ms-progress-bar"><div class="ms-progress-fill" id="msProgressFill">0%</div></div>';
-        main.appendChild(progressWrap);
-
-        // 帧信息
-        var framesInfo = document.createElement('div');
-        framesInfo.className = 'ms-frames-info';
-        framesInfo.id = 'msFramesInfo';
-        framesInfo.textContent = '请上传视频文件';
-        main.appendChild(framesInfo);
-
-        // 帧网格区域
-        var framesSection = document.createElement('div');
-        framesSection.className = 'ms-frames-section';
-        framesSection.id = 'msFramesSection';
-        framesSection.style.display = 'none';
-
-        var framesHeader = document.createElement('div');
-        framesHeader.className = 'ms-section-header';
-        framesHeader.innerHTML =
-            '<div><span class="ms-section-title">序列帧列表</span></div>' +
-            '<div class="ms-section-actions">' +
-                '<button class="ms-sm-btn ms-btn-primary" id="msSelectAllBtn">全选</button>' +
+        // ---- 第2行右列：已选择的序列帧 ----
+        var rightBottom = document.createElement('div');
+        rightBottom.className = 'ms-grid-cell ms-right-bottom';
+        rightBottom.innerHTML =
+            '<div class="ms-selected-section" id="msSelectedSection">' +
+                '<div class="ms-section-header">' +
+                    '<div class="ms-hdr-left">' +
+                        '<span class="ms-section-title">已选择的序列帧</span>' +
+                        '<span class="ms-badge" id="msSelectedBadge">0 帧</span>' +
+                    '</div>' +
+                    '<div class="ms-hdr-controls">' +
+                        '<span class="ms-hdr-label">缩放</span>' +
+                        '<input type="range" id="msSelectedZoom" min="0.5" max="3" step="0.25" value="1" class="ms-hdr-slider">' +
+                        '<span class="ms-hdr-val" id="msSelectedZoomVal">1x</span>' +
+                        '<button class="ms-sm-btn ms-btn-warning" id="msClearBtn" disabled>清空</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="ms-select-toolbar" id="msSelectToolbar">' +
+                    '<button class="ms-sm-btn ms-btn-outline" id="msOddBtn">奇数</button>' +
+                    '<button class="ms-sm-btn ms-btn-outline" id="msEvenBtn">偶数</button>' +
+                    '<button class="ms-sm-btn ms-btn-outline" id="msHalfBtn">二分</button>' +
+                    '<span class="ms-tb-label">循环</span>' +
+                    '<input type="number" class="ms-tb-input" id="msLoopInput" value="1" min="1">' +
+                    '<button class="ms-sm-btn ms-btn-outline" id="msLoopBtn">提取</button>' +
+                '</div>' +
+                '<div class="ms-selected-container">' +
+                    '<div class="ms-row-wrap">' +
+                        '<div class="ms-selected-grid ms-selected-grid-single" id="msSelectedRow"></div>' +
+                    '</div>' +
+                '</div>' +
             '</div>';
-        framesSection.appendChild(framesHeader);
+        // ---- 第2行左列：已选帧播放器 ----
+        var leftBottom = document.createElement('div');
+        leftBottom.className = 'ms-grid-cell ms-left-bottom';
+        leftBottom.innerHTML =
+            '<div class="ms-cell-header">已选帧播放' +
+                '<button class="ms-sm-btn ms-btn-primary" id="msPlayProcBtn" disabled>播放</button>' +
+            '</div>' +
+            '<div class="ms-cell-body">' +
+                '<canvas class="ms-play-canvas" id="msProcPreview"></canvas>' +
+            '</div>';
+        body.appendChild(leftBottom);
 
-        var framesGrid = document.createElement('div');
-        framesGrid.className = 'ms-frames-grid';
-        framesGrid.id = 'msFramesGrid';
-        framesSection.appendChild(framesGrid);
+        body.appendChild(rightBottom);
 
-        main.appendChild(framesSection);
-
-        // 选中帧区域
-        var selectedSection = document.createElement('div');
-        selectedSection.className = 'ms-selected-section';
-        selectedSection.id = 'msSelectedSection';
-        selectedSection.style.display = 'none';
-
-        var selectedHeader = document.createElement('div');
-        selectedHeader.className = 'ms-section-header';
-        selectedHeader.innerHTML =
-            '<div><span class="ms-section-title">已选择的序列帧</span> ' +
-                '<span class="ms-badge" id="msSelectedBadge">0 帧</span></div>';
-        selectedSection.appendChild(selectedHeader);
-
-        var selectedContainer = document.createElement('div');
-        selectedContainer.className = 'ms-selected-container';
-
-        // 上行
-        var row1Wrap = document.createElement('div');
-        row1Wrap.className = 'ms-row-wrap';
-        row1Wrap.innerHTML = '<div class="ms-row-label">上行</div>';
-        var row1 = document.createElement('div');
-        row1.className = 'ms-selected-grid';
-        row1.id = 'msSelectedRow1';
-        row1Wrap.appendChild(row1);
-        selectedContainer.appendChild(row1Wrap);
-
-        // 下行
-        var row2Wrap = document.createElement('div');
-        row2Wrap.className = 'ms-row-wrap';
-        row2Wrap.innerHTML = '<div class="ms-row-label">下行</div>';
-        var row2 = document.createElement('div');
-        row2.className = 'ms-selected-grid';
-        row2.id = 'msSelectedRow2';
-        row2Wrap.appendChild(row2);
-        selectedContainer.appendChild(row2Wrap);
-
-        selectedSection.appendChild(selectedContainer);
-        main.appendChild(selectedSection);
-
-        // 预览区域
-        var previewSection = document.createElement('div');
-        previewSection.className = 'ms-preview-section';
-        previewSection.id = 'msPreviewSection';
-        previewSection.style.display = 'none';
-
-        var previewHeader = document.createElement('div');
-        previewHeader.className = 'ms-section-header';
-        previewHeader.innerHTML = '<span class="ms-section-title">预览播放</span>';
-        previewSection.appendChild(previewHeader);
-
-        var previewContainer = document.createElement('div');
-        previewContainer.className = 'ms-preview-container';
-        var previewCanvas = document.createElement('canvas');
-        previewCanvas.className = 'ms-preview-canvas';
-        previewCanvas.id = 'msPreviewCanvas';
-        previewContainer.appendChild(previewCanvas);
-        previewSection.appendChild(previewContainer);
-
-        main.appendChild(previewSection);
-
-        body.appendChild(main);
         panel.appendChild(body);
 
         // Loading 遮罩
@@ -257,8 +201,10 @@ var Mp42SpritesSkill = {
         }
 
         this._overlay = ov;
-        this._previewCanvas = previewCanvas;
-        this._previewCtx = previewCanvas.getContext('2d');
+        this._origPreviewCanvas = ov.querySelector('#msOrigPreview');
+        this._origPreviewCtx = this._origPreviewCanvas.getContext('2d');
+        this._procPreviewCanvas = ov.querySelector('#msProcPreview');
+        this._procPreviewCtx = this._procPreviewCanvas.getContext('2d');
 
         // 隐藏 video
         this._hiddenVideo = document.createElement('video');
@@ -296,8 +242,7 @@ var Mp42SpritesSkill = {
             ov.querySelector('#msFrameZoomVal').textContent = self._frameZoom + 'x';
             var baseSize = 150;
             var newSize = Math.round(baseSize * self._frameZoom);
-            ov.querySelector('#msFramesGrid').style.gridTemplateColumns =
-                'repeat(auto-fill, minmax(' + newSize + 'px, 1fr))';
+            self._applyFrameItemSize(newSize);
         });
 
         // 选中帧缩放
@@ -317,14 +262,28 @@ var Mp42SpritesSkill = {
             self._clearSelection();
         });
 
-        // 播放
-        ov.querySelector('#msPlayBtn').addEventListener('click', function() {
+        // 原图帧播放 → 播放全部帧
+        ov.querySelector('#msPlayOrigBtn').addEventListener('click', function() {
+            self._playAllFrames();
+        });
+        // 已选帧播放 → 播放已选帧
+        ov.querySelector('#msPlayProcBtn').addEventListener('click', function() {
             self._playSelectedFrames();
         });
 
-        // 下载
-        ov.querySelector('#msDownloadBtn').addEventListener('click', function() {
-            self._downloadStrip();
+        // 快速提取
+        ov.querySelector('#msOddBtn').addEventListener('click', function() {
+            self._quickSelect('odd');
+        });
+        ov.querySelector('#msEvenBtn').addEventListener('click', function() {
+            self._quickSelect('even');
+        });
+        ov.querySelector('#msHalfBtn').addEventListener('click', function() {
+            self._quickSelect('half');
+        });
+        ov.querySelector('#msLoopBtn').addEventListener('click', function() {
+            var n = parseInt(ov.querySelector('#msLoopInput').value) || 1;
+            self._quickSelect('loop', n);
         });
 
         // 窗口拖拽
@@ -358,20 +317,22 @@ var Mp42SpritesSkill = {
 
         this._frames = [];
         this._selectedFrames = [];
-        this._frameRows = [];
         this._stopPreview();
+        // 清空左侧预览
+        if (this._origPreviewCtx) {
+            this._origPreviewCtx.clearRect(0, 0, this._origPreviewCanvas.width, this._origPreviewCanvas.height);
+        }
+        if (this._procPreviewCtx) {
+            this._procPreviewCtx.clearRect(0, 0, this._procPreviewCanvas.width, this._procPreviewCanvas.height);
+        }
 
         var progressWrap = this._overlay.querySelector('#msProgressWrap');
         var progressFill = this._overlay.querySelector('#msProgressFill');
         var framesGrid = this._overlay.querySelector('#msFramesGrid');
         var framesInfo = this._overlay.querySelector('#msFramesInfo');
         var framesSection = this._overlay.querySelector('#msFramesSection');
-        var selectedSection = this._overlay.querySelector('#msSelectedSection');
-        var previewSection = this._overlay.querySelector('#msPreviewSection');
 
         framesGrid.innerHTML = '';
-        selectedSection.style.display = 'none';
-        previewSection.style.display = 'none';
 
         progressWrap.style.display = 'block';
         progressFill.style.width = '0%';
@@ -381,26 +342,50 @@ var Mp42SpritesSkill = {
         var url = URL.createObjectURL(file);
         this._hiddenVideo.src = url;
 
+        var _captureMeta = null; // { fps, totalFrames, frameInterval, i }
+
         this._hiddenVideo.onloadedmetadata = function() {
             var duration = self._hiddenVideo.duration;
+            if (!duration || !isFinite(duration)) { framesInfo.textContent = '无法读取视频时长'; return; }
             var fps = 10;
             var totalFrames = Math.floor(duration * fps);
             var frameInterval = 1 / fps;
-            var i = 0;
+            _captureMeta = { fps: fps, totalFrames: totalFrames, frameInterval: frameInterval, i: 0 };
 
-            function captureNext() {
-                if (i >= totalFrames) {
-                    progressWrap.style.display = 'none';
-                    framesInfo.textContent = '共 ' + self._frames.length + ' 帧，已选择 0 帧';
-                    framesSection.style.display = 'block';
-                    self._updateButtons();
-                    return;
+            // 等视频真正解码出画面后再开始
+            self._hiddenVideo.oncanplay = function() {
+                self._hiddenVideo.oncanplay = null;
+                _captureNext();
+            };
+            // 如果 canplay 已过，loadeddata 兜底
+            self._hiddenVideo.onloadeddata = function() {
+                self._hiddenVideo.onloadeddata = null;
+                if (_captureMeta && _captureMeta.i === 0) {
+                    self._hiddenVideo.oncanplay = null;
+                    _captureNext();
                 }
+            };
+        };
 
-                var time = i * frameInterval;
-                self._hiddenVideo.currentTime = time;
+        function _captureNext() {
+            var meta = _captureMeta;
+            if (!meta || meta.i >= meta.totalFrames) {
+                progressWrap.style.display = 'none';
+                framesInfo.textContent = '共 ' + self._frames.length + ' 帧，已选择 0 帧';
+                framesSection.style.display = 'block';
+                self._applyFrameItemSize(150);
+                self._updateButtons();
+                _captureMeta = null;
+                return;
+            }
 
-                self._hiddenVideo.onseeked = function() {
+            var time = meta.i * meta.frameInterval;
+
+            // 先绑定事件，再设 currentTime
+            self._hiddenVideo.onseeked = function() {
+                self._hiddenVideo.onseeked = null;
+                // 等下一帧确保画面渲染完成
+                requestAnimationFrame(function() {
                     var canvas = document.createElement('canvas');
                     canvas.width = self._hiddenVideo.videoWidth;
                     canvas.height = self._hiddenVideo.videoHeight;
@@ -408,7 +393,7 @@ var Mp42SpritesSkill = {
                     ctx.drawImage(self._hiddenVideo, 0, 0);
 
                     self._frames.push({
-                        index: i,
+                        index: meta.i,
                         dataUrl: canvas.toDataURL('image/png'),
                         width: canvas.width,
                         height: canvas.height,
@@ -418,31 +403,58 @@ var Mp42SpritesSkill = {
                     // 添加到网格
                     var frameItem = document.createElement('div');
                     frameItem.className = 'ms-frame-item';
-                    frameItem.dataset.index = i;
+                    frameItem.dataset.index = meta.i;
                     frameItem.innerHTML =
-                        '<img src="' + self._frames[i].dataUrl + '" draggable="false">' +
-                        '<div class="ms-frame-number">' + (i + 1) + '</div>' +
+                        '<img src="' + self._frames[meta.i].dataUrl + '" draggable="false">' +
+                        '<div class="ms-frame-number">' + (meta.i + 1) + '</div>' +
                         '<div class="ms-play-order"></div>' +
                         '<div class="ms-frame-check">\u2713</div>';
 
                     frameItem.addEventListener('click', (function(idx) {
                         return function() { self._toggleFrameSelection(idx); };
-                    })(i));
+                    })(meta.i));
 
                     framesGrid.appendChild(frameItem);
 
-                    i++;
-                    var progress = Math.round((i / totalFrames) * 100);
+                    meta.i++;
+                    var progress = Math.round((meta.i / meta.totalFrames) * 100);
                     progressFill.style.width = progress + '%';
                     progressFill.textContent = progress + '%';
-                    framesInfo.textContent = '正在提取帧... ' + i + '/' + totalFrames;
+                    framesInfo.textContent = '正在提取帧... ' + meta.i + '/' + meta.totalFrames;
 
-                    setTimeout(captureNext, 0);
-                };
+                    setTimeout(_captureNext, 0);
+                });
+            };
+
+            // 触发 seek
+            self._hiddenVideo.currentTime = time;
+
+            // seeked 可能不触发时的兜底
+            if (meta.i === 0 || self._hiddenVideo.currentTime === time) {
+                setTimeout(function() {
+                    if (self._hiddenVideo.onseeked) {
+                        self._hiddenVideo.onseeked();
+                    }
+                }, 150);
             }
+        }
+    },
 
-            captureNext();
-        };
+    // ===== 帧渲染辅助 =====
+
+    _applyFrameItemSize: function(sizePx) {
+        var grid = this._overlay.querySelector('#msFramesGrid');
+        if (!grid) return;
+        var items = grid.querySelectorAll('.ms-frame-item');
+        items.forEach(function(item) {
+            item.style.width = sizePx + 'px';
+            item.style.height = sizePx + 'px';
+            var img = item.querySelector('img');
+            if (img) {
+                img.style.width = (sizePx - 4) + 'px';
+                img.style.height = (sizePx - 4) + 'px';
+            }
+        });
     },
 
     // ===== 帧选择 =====
@@ -454,16 +466,9 @@ var Mp42SpritesSkill = {
 
         if (pos !== -1) {
             this._selectedFrames.splice(pos, 1);
-            this._frameRows.splice(pos, 1);
             frameItem.classList.remove('selected');
-
-            if (this._selectedFrames.length === 0) {
-                this._stopPreview();
-                this._overlay.querySelector('#msPreviewSection').style.display = 'none';
-            }
         } else {
             this._selectedFrames.push(index);
-            this._frameRows.push(1);
             frameItem.classList.add('selected');
         }
 
@@ -473,18 +478,70 @@ var Mp42SpritesSkill = {
         this._renderSelectedFrames();
     },
 
+    _quickSelect: function(mode, n) {
+        if (!this._frames.length) return;
+        this._clearSelectionNoRedraw();
+        var total = this._frames.length;
+
+        if (mode === 'odd') {
+            // 奇数帧：第1,3,5帧… → 0-based索引 0,2,4…
+            for (var i = 0; i < total; i += 2) this._selectedFrames.push(i);
+        } else if (mode === 'even') {
+            // 偶数帧：第2,4,6帧… → 0-based索引 1,3,5…
+            for (var i = 1; i < total; i += 2) this._selectedFrames.push(i);
+        } else if (mode === 'half') {
+            // 二分法：逐级取中点，最多取到 1/8 精度
+            var result = [0, total - 1];
+            function addMidpoints(lo, hi, depth) {
+                if (depth >= 3 || lo + 1 >= hi) return; // 最多3层
+                var mid = Math.floor((lo + hi) / 2);
+                if (result.indexOf(mid) >= 0) return;
+                result.push(mid);
+                addMidpoints(lo, mid, depth + 1);
+                addMidpoints(mid, hi, depth + 1);
+            }
+            addMidpoints(0, total - 1, 0);
+            result.sort(function(a, b) { return a - b; });
+            this._selectedFrames = result;
+        } else if (mode === 'loop') {
+            n = Math.max(1, Math.floor(n));
+            var count = Math.floor(total / n);
+            for (var i = 0; i < count; i++) this._selectedFrames.push(i);
+        }
+
+        this._updateGridSelection();
+        this._updatePlayOrder();
+        this._updateFramesInfo();
+        this._updateButtons();
+        this._renderSelectedFrames();
+    },
+
+    _clearSelectionNoRedraw: function() {
+        var framesGrid = this._overlay.querySelector('#msFramesGrid');
+        this._selectedFrames.forEach(function(frameIndex) {
+            var item = framesGrid.children[frameIndex];
+            if (item) item.classList.remove('selected');
+        });
+        this._selectedFrames = [];
+    },
+
+    _updateGridSelection: function() {
+        var framesGrid = this._overlay.querySelector('#msFramesGrid');
+        this._selectedFrames.forEach(function(idx) {
+            var item = framesGrid.children[idx];
+            if (item) item.classList.add('selected');
+        });
+    },
+
     _toggleSelectAll: function() {
         var allSelected = this._selectedFrames.length === this._frames.length;
 
         if (allSelected) {
             this._selectedFrames = [];
-            this._frameRows = [];
         } else {
             this._selectedFrames = [];
-            this._frameRows = [];
             for (var i = 0; i < this._frames.length; i++) {
                 this._selectedFrames.push(i);
-                this._frameRows.push(1);
             }
         }
 
@@ -504,9 +561,6 @@ var Mp42SpritesSkill = {
     },
 
     _clearSelection: function() {
-        this._stopPreview();
-        this._overlay.querySelector('#msPreviewSection').style.display = 'none';
-
         var framesGrid = this._overlay.querySelector('#msFramesGrid');
         this._selectedFrames.forEach(function(frameIndex) {
             var item = framesGrid.children[frameIndex];
@@ -514,7 +568,6 @@ var Mp42SpritesSkill = {
         });
 
         this._selectedFrames = [];
-        this._frameRows = [];
         this._updatePlayOrder();
         this._updateFramesInfo();
         this._updateButtons();
@@ -540,29 +593,30 @@ var Mp42SpritesSkill = {
 
     _updateButtons: function() {
         var has = this._selectedFrames.length > 0;
-        this._overlay.querySelector('#msPlayBtn').disabled = !has;
-        this._overlay.querySelector('#msDownloadBtn').disabled = !has;
-        this._overlay.querySelector('#msClearBtn').disabled = !has;
+        var hasFrames = this._frames.length > 0;
+        var ov = this._overlay;
+        var origPlay = ov.querySelector('#msPlayOrigBtn');
+        if (origPlay) origPlay.disabled = !hasFrames;
+        var procPlay = ov.querySelector('#msPlayProcBtn');
+        if (procPlay) procPlay.disabled = !has;
+        var clearBtn = ov.querySelector('#msClearBtn');
+        if (clearBtn) clearBtn.disabled = !has;
+        // 快速提取按钮
+        ['#msOddBtn','#msEvenBtn','#msHalfBtn','#msLoopBtn'].forEach(function(id) {
+            var btn = ov.querySelector(id);
+            if (btn) btn.disabled = !hasFrames;
+        });
     },
 
     // ===== 选中帧预览 =====
 
     _renderSelectedFrames: function() {
         var self = this;
-        var selectedSection = this._overlay.querySelector('#msSelectedSection');
-        var row1 = this._overlay.querySelector('#msSelectedRow1');
-        var row2 = this._overlay.querySelector('#msSelectedRow2');
+        var row = this._overlay.querySelector('#msSelectedRow');
         var badge = this._overlay.querySelector('#msSelectedBadge');
 
-        if (this._selectedFrames.length === 0) {
-            selectedSection.style.display = 'none';
-            return;
-        }
-
-        selectedSection.style.display = 'block';
         badge.textContent = this._selectedFrames.length + ' 帧';
-        row1.innerHTML = '';
-        row2.innerHTML = '';
+        row.innerHTML = '';
 
         this._selectedFrames.forEach(function(frameIndex, order) {
             var frame = self._frames[frameIndex];
@@ -570,7 +624,6 @@ var Mp42SpritesSkill = {
             item.className = 'ms-selected-item';
             item.draggable = true;
             item.dataset.order = order;
-            item.dataset.row = self._frameRows[order] || 1;
 
             var baseSize = 80;
             var size = Math.round(baseSize * self._selectedZoom);
@@ -588,7 +641,7 @@ var Mp42SpritesSkill = {
                 self._toggleFrameSelection(frameIndex);
             });
 
-            // 拖拽
+            // 拖拽（仅同一行内重排）
             item.addEventListener('dragstart', function(e) {
                 self._draggedItem = item;
                 self._draggedOrder = parseInt(item.dataset.order);
@@ -598,11 +651,10 @@ var Mp42SpritesSkill = {
             });
             item.addEventListener('dragend', function() {
                 item.classList.remove('dragging');
-                document.querySelectorAll('.ms-selected-item').forEach(function(el) {
+                row.querySelectorAll('.ms-selected-item').forEach(function(el) {
                     el.classList.remove('drag-over');
                 });
-                row1.classList.remove('drag-over');
-                row2.classList.remove('drag-over');
+                row.classList.remove('drag-over');
                 self._draggedItem = null;
                 self._draggedOrder = null;
             });
@@ -621,141 +673,106 @@ var Mp42SpritesSkill = {
                 if (item === self._draggedItem) return;
 
                 var targetOrder = parseInt(item.dataset.order);
-                var draggedRow = self._frameRows[self._draggedOrder];
-                var targetRow = self._frameRows[targetOrder];
-
-                if (draggedRow === targetRow) {
-                    var draggedFrameIndex = self._selectedFrames[self._draggedOrder];
-                    var draggedFrameRow = self._frameRows[self._draggedOrder];
-                    self._selectedFrames.splice(self._draggedOrder, 1);
-                    self._frameRows.splice(self._draggedOrder, 1);
-                    var newTargetOrder = targetOrder > self._draggedOrder ? targetOrder - 1 : targetOrder;
-                    self._selectedFrames.splice(newTargetOrder, 0, draggedFrameIndex);
-                    self._frameRows.splice(newTargetOrder, 0, draggedFrameRow);
-                    self._updatePlayOrder();
-                    self._renderSelectedFrames();
-                } else {
-                    self._frameRows[self._draggedOrder] = targetRow;
-                    self._renderSelectedFrames();
-                }
+                var draggedFrameIndex = self._selectedFrames[self._draggedOrder];
+                self._selectedFrames.splice(self._draggedOrder, 1);
+                var newTargetOrder = targetOrder > self._draggedOrder ? targetOrder - 1 : targetOrder;
+                self._selectedFrames.splice(newTargetOrder, 0, draggedFrameIndex);
+                self._updatePlayOrder();
+                self._renderSelectedFrames();
             });
 
-            var row = self._frameRows[order] || 1;
-            if (row === 1) {
-                row1.appendChild(item);
-            } else {
-                row2.appendChild(item);
-            }
+            row.appendChild(item);
         });
-
-        // 行拖放区域
-        this._setupRowDropZones(row1, row2);
-    },
-
-    _setupRowDropZones: function(row1, row2) {
-        var self = this;
-        function setupZone(el, row) {
-            el.ondragover = function(e) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                el.classList.add('drag-over');
-            };
-            el.ondragleave = function() {
-                el.classList.remove('drag-over');
-            };
-            el.ondrop = function(e) {
-                e.preventDefault();
-                el.classList.remove('drag-over');
-                var draggedOrder = parseInt(e.dataTransfer.getData('text/plain'));
-                if (!isNaN(draggedOrder) && self._frameRows[draggedOrder] !== undefined) {
-                    self._frameRows[draggedOrder] = row;
-                    self._updatePlayOrder();
-                    self._renderSelectedFrames();
-                }
-            };
-        }
-        setupZone(row1, 1);
-        setupZone(row2, 2);
     },
 
     // ===== 播放预览 =====
 
+    _playAllFrames: function() {
+        if (this._frames.length === 0) return;
+        this._stopCanvas(this._origPreviewCanvas);
+        var allOrder = [];
+        for (var i = 0; i < this._frames.length; i++) allOrder.push(i);
+        this._startPlayback(this._origPreviewCanvas, this._origPreviewCtx, allOrder, false);
+    },
+
     _playSelectedFrames: function() {
         if (this._selectedFrames.length === 0) return;
-        this._stopPreview();
+        this._stopCanvas(this._procPreviewCanvas);
+        var selOrder = this._selectedFrames.slice();
+        this._startPlayback(this._procPreviewCanvas, this._procPreviewCtx, selOrder, false);
+    },
 
-        var previewSection = this._overlay.querySelector('#msPreviewSection');
-        previewSection.style.display = 'block';
-        previewSection.scrollIntoView({ behavior: 'smooth' });
+    _startPlayback: function(canvas, ctx, frameIndices, applyMatting) {
+        if (frameIndices.length === 0) return;
+        this._stopCanvas(canvas);
 
-        var firstFrame = this._frames[this._selectedFrames[0]];
-        this._previewCanvas.width = firstFrame.width;
-        this._previewCanvas.height = firstFrame.height;
-
-        // 构建播放顺序：先 row1，再 row2
-        var playOrder = [];
-        for (var i = 0; i < this._selectedFrames.length; i++) {
-            if (this._frameRows[i] === 1) playOrder.push(i);
-        }
-        for (var i = 0; i < this._selectedFrames.length; i++) {
-            if (this._frameRows[i] === 2) playOrder.push(i);
-        }
-
-        var loadedImages = [];
-        for (var j = 0; j < playOrder.length; j++) {
-            var img = new Image();
-            img.src = this._frames[this._selectedFrames[playOrder[j]]].dataUrl;
-            loadedImages.push(img);
-        }
+        var firstFrame = this._frames[frameIndices[0]];
+        canvas.width = firstFrame.width;
+        canvas.height = firstFrame.height;
 
         var self = this;
-        this._isPlaying = true;
-        this._currentFrameIndex = 0;
+        var pending = frameIndices.length;
 
-        var fps = 10;
-        var frameDelay = 1000 / fps;
+        function onImageReady() {
+            pending--;
+            if (pending > 0) return;
+            canvas._playing = true;
+            canvas._frameIdx = 0;
+            var fps = 10;
+            var frameDelay = 1000 / fps;
 
-        function renderFrame() {
-            if (!self._isPlaying) return;
-            var img = loadedImages[self._currentFrameIndex];
-            if (img.complete) {
-                self._previewCtx.clearRect(0, 0, self._previewCanvas.width, self._previewCanvas.height);
-                self._previewCtx.drawImage(img, 0, 0);
+            function renderFrame() {
+                if (!canvas._playing) return;
+                var idx = frameIndices[canvas._frameIdx];
+                var srcFrame = self._frames[idx];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (applyMatting) {
+                    self._removeBackground(srcFrame.canvas).then(function(resultCanvas) {
+                        ctx.drawImage(resultCanvas, 0, 0);
+                    });
+                } else {
+                    ctx.drawImage(srcFrame.canvas, 0, 0);
+                }
+                canvas._frameIdx = (canvas._frameIdx + 1) % frameIndices.length;
             }
-            self._currentFrameIndex = (self._currentFrameIndex + 1) % playOrder.length;
+
+            renderFrame();
+            canvas._animId = setInterval(renderFrame, frameDelay);
         }
 
-        renderFrame();
-        this._animationId = setInterval(renderFrame, frameDelay);
+        for (var j = 0; j < frameIndices.length; j++) {
+            var img = new Image();
+            img.onload = onImageReady;
+            img.onerror = onImageReady;
+            img.src = this._frames[frameIndices[j]].dataUrl;
+        }
+    },
+
+    _stopCanvas: function(canvas) {
+        if (canvas && canvas._playing) {
+            canvas._playing = false;
+            if (canvas._animId) {
+                clearInterval(canvas._animId);
+                canvas._animId = null;
+            }
+        }
     },
 
     _stopPreview: function() {
-        if (this._isPlaying) {
-            this._isPlaying = false;
-            if (this._animationId) {
-                clearInterval(this._animationId);
-                this._animationId = null;
-            }
-        }
+        this._stopCanvas(this._origPreviewCanvas);
+        this._stopCanvas(this._procPreviewCanvas);
     },
 
     // ===== 下载序列图 =====
 
-    _downloadStrip: function() {
+    _downloadStrip: function(applyMatting) {
         var self = this;
         if (this._selectedFrames.length === 0) return;
 
-        var mattingMode = this._overlay.querySelector('#msMattingMode').checked;
-
+        var mattingMode = applyMatting;
         this._showLoading(mattingMode ? '正在处理图像...' : '正在生成序列图...');
 
-        var playOrder = [];
-        for (var i = 0; i < this._selectedFrames.length; i++) {
-            if (this._frameRows[i] === 1) playOrder.push(i);
-        }
-        for (var i = 0; i < this._selectedFrames.length; i++) {
-            if (this._frameRows[i] === 2) playOrder.push(i);
-        }
+        var playOrder = this._selectedFrames.map(function(_, i) { return i; });
 
         var processedFrames = [];
         var idx = 0;
@@ -864,9 +881,10 @@ var Mp42SpritesSkill = {
         this._overlay = null;
         this._frames = [];
         this._selectedFrames = [];
-        this._frameRows = [];
-        this._previewCanvas = null;
-        this._previewCtx = null;
+        this._origPreviewCanvas = null;
+        this._origPreviewCtx = null;
+        this._procPreviewCanvas = null;
+        this._procPreviewCtx = null;
     }
 };
 
@@ -913,33 +931,38 @@ function _detectBackgroundColor(data, width, height) {
         '.ms-close-btn:hover { background:rgba(220,80,60,.4); }' +
         '.ms-close-btn:active { transform:scale(0.92); }' +
 
-        /* 主体 */
-        '.ms-body { display:flex;flex:1;overflow:hidden; }' +
+        /* 主体：2列2行 grid */
+        '.ms-body { display:grid;grid-template-columns:280px 1fr;grid-template-rows:1fr 1fr;flex:1;overflow:hidden; }' +
+        '.ms-grid-cell { overflow-y:auto;padding:12px;display:flex;flex-direction:column; }' +
+        '.ms-left-top { grid-column:1;grid-row:1;background:rgba(20,35,70,0.6);border-right:1px solid rgba(100,160,255,0.15);' +
+            'border-bottom:1px solid rgba(100,160,255,0.08); }' +
+        '.ms-left-bottom { grid-column:1;grid-row:2;background:rgba(20,35,70,0.6);border-right:1px solid rgba(100,160,255,0.15); }' +
+        '.ms-right-top { grid-column:2;grid-row:1;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(100,160,255,0.08); }' +
+        '.ms-right-bottom { grid-column:2;grid-row:2;background:rgba(255,255,255,.02); }' +
 
-        /* 左侧工具栏 */
-        '.ms-sidebar { width:200px;flex-shrink:0;background:rgba(20,35,70,0.6);border-right:1px solid rgba(100,160,255,0.15);' +
-            'padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:14px; }' +
-        '.ms-sidebar-section { display:flex;flex-direction:column;gap:6px; }' +
-        '.ms-sidebar-title { font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;' +
-            'margin-bottom:2px;display:flex;align-items:center;gap:6px; }' +
-        '.ms-sidebar-title::before { content:"";width:3px;height:12px;background:#38bdf8;border-radius:2px; }' +
-        '.ms-sidebar-btn { padding:8px 14px;border:none;border-radius:8px;cursor:pointer;' +
-            'font-size:13px;font-weight:600;color:#fff;transition:all .15s;text-align:center; }' +
-        '.ms-sidebar-btn:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3); }' +
-        '.ms-sidebar-btn:active:not(:disabled) { transform:scale(0.92); }' +
-        '.ms-sidebar-btn:disabled { opacity:.35;cursor:not-allowed;transform:none; }' +
+        /* 左列播放器 */
+        '.ms-cell-header { font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;' +
+            'display:flex;align-items:center;justify-content:space-between;flex-shrink:0;padding-bottom:8px;' +
+            'border-bottom:1px solid rgba(100,160,255,0.08);margin-bottom:8px; }' +
+        '.ms-cell-header::before { content:"";width:3px;height:12px;background:#38bdf8;border-radius:2px;' +
+            'margin-right:8px; }' +
+        '.ms-cell-body { flex:1;min-height:0;display:flex;align-items:center;justify-content:center;' +
+            'background:rgba(0,0,0,.3);border-radius:8px;overflow:hidden; }' +
+        '.ms-play-canvas { max-width:100%;max-height:100%;object-fit:contain; }' +
+
+        /* 上传区域 */
+        '.ms-upload-area { margin-bottom:10px;text-align:center;flex-shrink:0; }' +
+        '.ms-upload-btn { padding:10px 28px;border:none;border-radius:10px;cursor:pointer;' +
+            'font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#38bdf8,#0ea5e9);' +
+            'box-shadow:0 4px 14px rgba(56,189,248,.25);transition:all .15s; }' +
+        '.ms-upload-btn:hover { transform:translateY(-2px);box-shadow:0 6px 20px rgba(56,189,248,.35); }' +
+        '.ms-upload-btn:active { transform:scale(0.95); }' +
         '.ms-btn-primary { background:#38bdf8; }' +
         '.ms-btn-primary:hover:not(:disabled) { background:#0ea5e9; }' +
-        '.ms-btn-success { background:linear-gradient(135deg,#11998e,#38ef7d); }' +
-        '.ms-btn-warning { background:rgba(255,255,255,.08);color:#e8edf5;border:1px solid rgba(100,160,255,0.15); }' +
-        '.ms-btn-warning:hover:not(:disabled) { background:rgba(255,255,255,.12); }' +
-        '.ms-slider { width:100%;cursor:pointer;accent-color:#38bdf8; }' +
-        '.ms-slider-label { font-size:12px;color:#94a3b8;text-align:center; }' +
-        '.ms-checkbox-label { display:flex;align-items:center;gap:6px;font-size:13px;color:#cbd5e1;cursor:pointer; }' +
-        '.ms-checkbox-label input { width:16px;height:16px;accent-color:#38bdf8; }' +
 
-        /* 右侧内容 */
-        '.ms-main { flex:1;overflow-y:auto;padding:16px;background:rgba(255,255,255,.02); }' +
+        /* 右列 */
+        '.ms-right-top { gap:6px; }' +
+        '.ms-right-bottom { gap:6px; }' +
 
         /* 进度条 */
         '.ms-progress-wrap { margin-bottom:14px; }' +
@@ -953,24 +976,48 @@ function _detectBackgroundColor(data, width, height) {
             'margin-bottom:14px;border:1px solid rgba(100,160,255,0.15); }' +
 
         /* 区块 */
-        '.ms-frames-section,.ms-selected-section,.ms-preview-section { margin-bottom:16px;' +
+        '.ms-frames-section,.ms-selected-section { margin-bottom:16px;' +
             'padding:14px;background:rgba(255,255,255,.02);border-radius:10px;border:1px dashed rgba(100,160,255,0.2); }' +
         '.ms-section-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px; }' +
         '.ms-section-title { font-size:13px;color:#e8edf5;font-weight:700; }' +
         '.ms-badge { background:#38bdf8;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700; }' +
         '.ms-sm-btn { padding:5px 12px;border:none;border-radius:8px;cursor:pointer;font-size:12px;' +
-            'font-weight:600;color:#fff;transition:all .15s; }' +
+            'font-weight:600;color:#fff;transition:all .15s;white-space:nowrap; }' +
         '.ms-sm-btn:hover { transform:translateY(-1px); }' +
         '.ms-sm-btn:active { transform:scale(0.92); }' +
+        '.ms-sm-btn:disabled { opacity:.35;cursor:default;transform:none; }' +
+        '.ms-sm-btn.ms-btn-primary { background:#38bdf8; }' +
+        '.ms-sm-btn.ms-btn-primary:hover:not(:disabled) { background:#0ea5e9; }' +
+        '.ms-sm-btn.ms-btn-warning { background:#f59e0b; }' +
+        '.ms-sm-btn.ms-btn-warning:hover:not(:disabled) { background:#d97706; }' +
+        '.ms-sm-btn.ms-btn-success { background:#10b981; }' +
+        '.ms-sm-btn.ms-btn-success:hover:not(:disabled) { background:#059669; }' +
+        '.ms-sm-btn.ms-btn-outline { background:transparent;border:1px solid rgba(100,160,255,0.25);color:#94a3b8; }' +
+        '.ms-sm-btn.ms-btn-outline:hover:not(:disabled) { border-color:#38bdf8;color:#38bdf8; }' +
+        '.ms-select-toolbar { display:flex;align-items:center;gap:6px;padding:6px 0;flex-shrink:0;flex-wrap:wrap; }' +
+        '.ms-tb-label { font-size:11px;color:#64748b;white-space:nowrap;margin-left:4px; }' +
+        '.ms-tb-input { width:48px;padding:3px 6px;background:rgba(0,0,0,.3);border:1px solid rgba(100,160,255,0.15);' +
+            'border-radius:6px;color:#e2e8f0;font-size:12px;text-align:center;outline:none; }' +
+        '.ms-tb-input:focus { border-color:rgba(56,189,248,.4); }' +
+        '.ms-hdr-left { display:flex;align-items:center;gap:8px; }' +
+        '.ms-hdr-controls { display:flex;align-items:center;gap:8px;flex-shrink:0; }' +
+        '.ms-hdr-label { font-size:11px;color:#64748b;white-space:nowrap; }' +
+        '.ms-hdr-slider { width:80px;height:3px;-webkit-appearance:none;appearance:none;' +
+            'background:rgba(56,189,248,0.15);border-radius:2px;outline:none;cursor:pointer; }' +
+        '.ms-hdr-slider::-webkit-slider-thumb { -webkit-appearance:none;appearance:none;' +
+            'width:10px;height:10px;border-radius:50%;background:#38bdf8;border:none;cursor:pointer; }' +
+        '.ms-hdr-val { font-size:10px;color:#94a3b8;min-width:20px;text-align:center; }' +
+        '.ms-hdr-checkbox { display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#94a3b8;cursor:pointer; }' +
+        '.ms-hdr-checkbox input[type="checkbox"] { accent-color:#38bdf8; }' +
 
-        /* 帧网格 */
-        '.ms-frames-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;' +
-            'max-height:400px;overflow-y:auto;padding:10px;background:rgba(0,0,0,.2);border-radius:10px;border:1px solid rgba(100,160,255,0.15); }' +
+        /* 帧网格 — 横向滚动 */
+        '.ms-frames-grid { display:flex;gap:8px;padding:10px;background:rgba(0,0,0,.2);' +
+            'border-radius:10px;border:1px solid rgba(100,160,255,0.15);overflow-x:auto;overflow-y:hidden;min-height:170px;flex-shrink:0; }' +
         '.ms-frame-item { position:relative;cursor:pointer;border-radius:8px;overflow:hidden;' +
-            'transition:all .15s;border:2px solid transparent; }' +
+            'transition:all .15s;border:2px solid transparent;flex-shrink:0; }' +
         '.ms-frame-item:hover { transform:scale(1.03);box-shadow:0 4px 12px rgba(0,0,0,.3); }' +
         '.ms-frame-item.selected { border-color:#38bdf8;box-shadow:0 0 12px rgba(56,189,248,.4); }' +
-        '.ms-frame-item img { width:100%;height:auto;display:block; }' +
+        '.ms-frame-item img { display:block;object-fit:cover;border-radius:6px; }' +
         '.ms-frame-number { position:absolute;top:3px;left:3px;background:rgba(0,0,0,.7);color:#fff;' +
             'padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700; }' +
         '.ms-play-order { position:absolute;top:3px;right:26px;background:rgba(56,189,248,.9);color:#fff;' +
@@ -982,11 +1029,11 @@ function _detectBackgroundColor(data, width, height) {
 
         /* 选中帧 */
         '.ms-selected-container { display:flex;flex-direction:column;gap:10px; }' +
-        '.ms-row-wrap { display:flex;align-items:flex-start;gap:8px; }' +
-        '.ms-row-label { background:#38bdf8;color:#fff;padding:5px 8px;border-radius:6px;font-weight:700;font-size:12px;' +
-            'min-width:40px;text-align:center;flex-shrink:0; }' +
+        '.ms-row-wrap { display:flex;align-items:flex-start; }' +
         '.ms-selected-grid { display:flex;flex-wrap:wrap;gap:6px;min-height:50px;padding:8px;background:rgba(0,0,0,.2);' +
             'border-radius:8px;border:1px dashed rgba(100,160,255,0.2);flex:1;transition:all .15s; }' +
+        '.ms-selected-grid-single { display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;overflow-y:hidden;' +
+            'min-height:100px;align-items:flex-start;padding:8px; }' +
         '.ms-selected-grid.drag-over { border-color:#38bdf8;background:rgba(56,189,248,.08); }' +
         '.ms-selected-item { position:relative;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.3);' +
             'transition:all .15s;cursor:grab;flex-shrink:0; }' +
@@ -1002,10 +1049,7 @@ function _detectBackgroundColor(data, width, height) {
             'cursor:pointer;opacity:0;transition:opacity .15s; }' +
         '.ms-selected-item:hover .ms-selected-remove { opacity:1; }' +
 
-        /* 预览 */
-        '.ms-preview-container { display:flex;justify-content:center;align-items:center;min-height:200px;' +
-            'background:rgba(0,0,0,.4);border-radius:8px;overflow:hidden; }' +
-        '.ms-preview-canvas { max-width:100%;max-height:500px; }' +
+
 
         /* Loading */
         '.ms-loading { position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);' +
@@ -1017,10 +1061,8 @@ function _detectBackgroundColor(data, width, height) {
         '.ms-loading-text { font-size:13px;color:#94a3b8; }' +
 
         /* 滚动条 */
-        '.ms-main::-webkit-scrollbar-track { background:transparent; }' +
-        '.ms-main::-webkit-scrollbar-thumb { background:rgba(56,189,248,0.2);border-radius:3px; }' +
-        '.ms-sidebar::-webkit-scrollbar-track { background:transparent; }' +
-        '.ms-sidebar::-webkit-scrollbar-thumb { background:rgba(56,189,248,0.2);border-radius:3px; }' +
+        '.ms-grid-cell::-webkit-scrollbar-track, .ms-frames-grid::-webkit-scrollbar-track, .ms-selected-grid-single::-webkit-scrollbar-track { background:transparent; }' +
+        '.ms-grid-cell::-webkit-scrollbar-thumb, .ms-frames-grid::-webkit-scrollbar-thumb, .ms-selected-grid-single::-webkit-scrollbar-thumb { background:rgba(56,189,248,0.2);border-radius:3px; }' +
 
         /* 隐藏 file input */
         '.ms-overlay input[type="file"] { display:none; }';
