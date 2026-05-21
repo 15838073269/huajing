@@ -32,15 +32,19 @@ var PromptTemplateSkill = {
     _DB_NAME: 'PromptTemplateDB',
     _DB_STORE: 'data',
     _DB_VERSION: 3,
+    _dbReadSuccess: false,   // 标记 IndexedDB 是否成功读取
 
     activate: function(world) {
         this._world = world;
         var self = this;
         this._loadData(function() {
-            if (!self._templates.length && typeof PROMPT_TEMPLATES !== 'undefined') {
+            // 仅在 IndexedDB 成功读取且确认为空时，才导入静态默认数据
+            if (self._dbReadSuccess && !self._templates.length
+                && typeof PROMPT_TEMPLATES !== 'undefined') {
                 PROMPT_TEMPLATES.forEach(function(t) {
                     self._templates.unshift({ text: t, tags: [] });
                 });
+                // 首次使用时保存默认数据
                 self._saveData();
             }
             if (!self._managerEl) {
@@ -105,12 +109,22 @@ var PromptTemplateSkill = {
                             self._saveData();
                         }
                     }
+                    self._dbReadSuccess = true;
                     if (cb) cb();
                 };
-                get.onerror = function() { if (cb) cb(); };
-            } catch(err) { if (cb) cb(); }
+                get.onerror = function() {
+                    self._dbReadSuccess = false;
+                    if (cb) cb();
+                };
+            } catch(err) {
+                self._dbReadSuccess = false;
+                if (cb) cb();
+            }
         };
-        req.onerror = function() { if (cb) cb(); };
+        req.onerror = function() {
+            self._dbReadSuccess = false;
+            if (cb) cb();
+        };
     },
 
     _saveData: function() {
@@ -239,11 +253,25 @@ var PromptTemplateSkill = {
                             var t = typeof item === 'string' ? item : (item.text || item.template || '');
                             if (t) { self._templates.unshift({ text: t, tags: [] }); count++; }
                         });
+                        // 偏移 _lastInputs 索引
+                        var shifted = {};
+                        Object.keys(self._lastInputs).forEach(function(key) {
+                            var parts = key.split('-');
+                            shifted[(parseInt(parts[0]) + count) + '-' + parts[1]] = self._lastInputs[key];
+                        });
+                        self._lastInputs = shifted;
                         self._saveData(); self._renderSidebar(); self._renderList(); self._showToast('已导入 ' + count + ' 条');
                     }
                 } catch(err) {
                     var lines = ev.target.result.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l; });
                     lines.forEach(function(line) { self._templates.unshift({ text: line, tags: [] }); });
+                    // 偏移 _lastInputs 索引
+                    var shifted = {};
+                    Object.keys(self._lastInputs).forEach(function(key) {
+                        var parts = key.split('-');
+                        shifted[(parseInt(parts[0]) + lines.length) + '-' + parts[1]] = self._lastInputs[key];
+                    });
+                    self._lastInputs = shifted;
                     self._saveData(); self._renderSidebar(); self._renderList(); self._showToast('已导入 ' + lines.length + ' 条');
                 }
                 fileInput.value = '';
@@ -263,6 +291,7 @@ var PromptTemplateSkill = {
             if (!self._templates.length) return;
             if (!confirm('确定清空所有模板？')) return;
             self._templates = [];
+            self._lastInputs = {};
             self._saveData(); self._renderSidebar(); self._renderList(); self._showToast('已清空');
         });
 
@@ -474,6 +503,15 @@ var PromptTemplateSkill = {
         if (!raw) return;
         var lines = raw.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l; });
         if (!lines.length) return;
+        var n = lines.length;
+        // unshift 添加前，先将 _lastInputs 中的索引偏移 n 位
+        var shifted = {};
+        Object.keys(this._lastInputs).forEach(function(key) {
+            var parts = key.split('-');
+            var ti = parseInt(parts[0]);
+            shifted[(ti + n) + '-' + parts[1]] = this._lastInputs[key];
+        }.bind(this));
+        this._lastInputs = shifted;
         lines.forEach(function(line) {
             this._templates.unshift({ text: line, tags: [] });
         }.bind(this));
@@ -481,7 +519,7 @@ var PromptTemplateSkill = {
         this._managerEl.querySelector('#ptAddText').value = '';
         this._renderSidebar();
         this._renderList();
-        this._showToast('已添加 ' + lines.length + ' 条');
+        this._showToast('已添加 ' + n + ' 条');
     },
 
     _renderList: function() {
@@ -577,6 +615,20 @@ var PromptTemplateSkill = {
                 e.stopPropagation();
                 var idx = parseInt(this.dataset.idx);
                 self._templates.splice(idx, 1);
+                // 清理 _lastInputs：移除被删模板的条目，将后续索引前移
+                var newInputs = {};
+                Object.keys(self._lastInputs).forEach(function(key) {
+                    var parts = key.split('-');
+                    var ti = parseInt(parts[0]);
+                    var si = parts[1];
+                    if (ti < idx) {
+                        newInputs[key] = self._lastInputs[key];
+                    } else if (ti > idx) {
+                        newInputs[(ti - 1) + '-' + si] = self._lastInputs[key];
+                    }
+                    // ti === idx → 丢弃
+                });
+                self._lastInputs = newInputs;
                 self._saveData();
                 self._renderSidebar();
                 self._renderList();
@@ -702,6 +754,13 @@ var PromptTemplateSkill = {
     // 公开方法：供其他插件直接添加模板
     addTemplate: function(text, tags) {
         if (!text || !text.trim()) return;
+        // unshift 前偏移 _lastInputs 索引
+        var shifted = {};
+        Object.keys(this._lastInputs).forEach(function(key) {
+            var parts = key.split('-');
+            shifted[(parseInt(parts[0]) + 1) + '-' + parts[1]] = this._lastInputs[key];
+        }.bind(this));
+        this._lastInputs = shifted;
         this._templates.unshift({ text: text.trim(), tags: tags || [] });
         this._saveData();
         if (this._managerEl && this._managerEl.style.display !== 'none') {
