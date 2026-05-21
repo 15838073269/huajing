@@ -15,14 +15,17 @@ var SkillSystem = (function() {
         subtoolsEl = subtoolsContainer;
         renderHotbar(); // 初始渲染（包含商店按钮）
 
-        // 点击插件窗口时自动切换到对应插件（捕获阶段，优先于插件的 stopPropagation）
+        // 点击插件窗口时自动切换到对应插件 + 窗口置顶
         // 绘画模式特殊：激活期间不允许自动切换
         document.addEventListener('mousedown', function(e) {
-            var target = e.target.closest('[data-skill-id]');
-            if (target) {
-                var skillId = target.getAttribute('data-skill-id');
+            // 查找插件窗口容器
+            var win = e.target.closest('[data-skill-id]');
+            if (win) {
+                var topZ = (window.__cos_topZ || 10000) + 1;
+                window.__cos_topZ = topZ;
+                win.style.zIndex = topZ;
+                var skillId = win.getAttribute('data-skill-id');
                 if (skillId && skillId !== activeSkill && skills[skillId]) {
-                    // 绘画模式不允许自动切换
                     if (activeSkill === 'drawing') return;
                     activate(skillId);
                 }
@@ -83,36 +86,58 @@ var SkillSystem = (function() {
     // 获取商店中的插件
     function getPlugins() { return plugins; }
 
-    // 显示插件包裹
+    // 显示插件包裹（改用独立窗口，和插件窗口一致）
     function showStore() {
         var installed = Object.keys(skills);
         var available = Object.keys(plugins);
 
-        var html = '<div class="cos-bag">';
+        // 关闭已有的包裹窗口
+        var oldBag = document.querySelector('[data-skill-id="__bag__"]');
+        if (oldBag) { oldBag.remove(); }
 
-        // 搜索框
-        html += '<div class="cos-bag-search">' +
-            '<input type="text" class="cos-bag-search-input" id="cosBagSearch" placeholder="输入编号或名称搜索...">' +
-            '</div>';
+        var ov = document.createElement('div');
+        ov.setAttribute('data-skill-id', '__bag__');
+        var topZ = (window.__cos_topZ || 10000) + 1;
+        window.__cos_topZ = topZ;
+        ov.style.cssText =
+            'position:fixed;z-index:' + topZ + ';background:#0f1525;color:#e8edf5;border-radius:12px;' +
+            'border:1px solid rgba(100,160,255,0.15);box-shadow:0 8px 40px rgba(0,0,0,0.6);' +
+            'overflow:hidden;display:flex;flex-direction:column;font-size:13px;' +
+            'width:380px;height:400px;left:' + Math.max(20, (window.innerWidth - 380) / 2) + 'px;' +
+            'top:' + Math.max(20, (window.innerHeight - 400) / 2) + 'px;';
 
-        // 安装区（上方）
-        html += '<div class="cos-bag-zone-label">已装备</div>';
-        html += '<div class="cos-bag-zone" id="cosBagInstalled" data-zone="installed">';
+        var html =
+            '<div class="cos-overlay-header" style="display:flex;align-items:center;justify-content:space-between;' +
+            'padding:10px 14px;border-bottom:1px solid rgba(100,160,255,0.1);cursor:move;user-select:none;flex-shrink:0;">' +
+            '<span style="font-weight:600;color:#38bdf8;font-size:14px;">包裹</span>' +
+            '<span class="cos-overlay-close" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;' +
+            'border-radius:6px;cursor:pointer;color:#94a3b8;font-size:16px;">×</span></div>' +
+            '<div class="cos-overlay-body" style="flex:1;overflow-y:auto;padding:10px 14px;">' +
+            '<div class="cos-bag">' +
+            '<div class="cos-bag-search"><input type="text" class="cos-bag-search-input" id="cosBagSearch" ' +
+            'placeholder="输入编号或名称搜索..." style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid rgba(100,160,255,0.12);' +
+            'background:rgba(20,30,60,0.5);color:#e8edf5;font-size:12px;outline:none;"></div>' +
+            '<div class="cos-bag-zone-label" style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">已装备</div>' +
+            '<div class="cos-bag-zone" id="cosBagInstalled" data-zone="installed" style="display:flex;flex-wrap:wrap;gap:4px;">';
+
         installed.forEach(function(id, idx) {
             var s = skills[id];
             var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[id]) ? PLUGIN_NUMBERS[id] : '';
-            html += '<div class="cos-bag-item installed" draggable="true" data-id="' + id + '" data-zone="installed" title="' + s.name + '">' +
+            html += '<div class="cos-bag-item installed" draggable="true" data-id="' + id + '" data-zone="installed" title="' + s.name + '" ' +
+                'style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;border:1px solid rgba(100,160,255,0.08);' +
+                'background:rgba(20,30,60,0.4);cursor:grab;font-size:12px;">' +
                 '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span>' +
-                (num ? '<span class="cos-bag-num">' + num + '</span>' : '') + '</div>';
+                (num ? '<span class="cos-bag-num" style="font-size:10px;color:#475569;margin-left:2px;">' + num + '</span>' : '') + '</div>';
         });
         html += '</div>';
 
-        // 卸载区（下方）
-        html += '<div class="cos-bag-zone-label">背包</div>';
-        html += '<div class="cos-bag-zone" id="cosBagAvailable" data-zone="available">';
+        html += '<div class="cos-bag-zone-label" style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">背包</div>';
+        html += '<div class="cos-bag-zone" id="cosBagAvailable" data-zone="available" style="display:flex;flex-wrap:wrap;gap:4px;">';
         available.forEach(function(id) {
             var s = plugins[id];
-            html += '<div class="cos-bag-item" draggable="true" data-id="' + id + '" data-zone="available" title="' + s.name + '">' +
+            html += '<div class="cos-bag-item" draggable="true" data-id="' + id + '" data-zone="available" title="' + s.name + '" ' +
+                'style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;border:1px solid rgba(100,160,255,0.08);' +
+                'background:rgba(20,30,60,0.2);cursor:grab;font-size:12px;">' +
                 '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span></div>';
         });
         html += '</div>';
@@ -121,9 +146,57 @@ var SkillSystem = (function() {
             html += '<div style="text-align:center;padding:20px;color:var(--cos-text-dim);">暂无可用插件</div>';
         }
 
-        html += '</div>';
+        html += '</div></div>';
 
-        showOverlay('包裹', html, '320px');
+        ov.innerHTML = html;
+        document.body.appendChild(ov);
+
+        // 禁用右键菜单
+        ov.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+        // 预设初始尺寸位置（始终覆盖，防止旧数据缺 left/top 导致跑角落）
+        try {
+            var cl = Math.max(20, (window.innerWidth - 380) / 2);
+            var ct = Math.max(20, (window.innerHeight - 400) / 2);
+            localStorage.setItem('cos-bag-rect', JSON.stringify({ w: 380, h: 400, l: Math.round(cl), t: Math.round(ct) }));
+        } catch(e) {}
+        if (typeof WindowHelper !== 'undefined') {
+            WindowHelper.makeResizable(ov, { minWidth: 320, minHeight: 250, storeKey: 'cos-bag-rect' });
+        }
+
+        // 拖拽
+        var header = ov.querySelector('.cos-overlay-header');
+        var dState = { active: false, sx: 0, sy: 0, ox: 0, oy: 0 };
+        header.addEventListener('mousedown', function(e) {
+            if (e.target.closest('.cos-overlay-close')) return;
+            dState.active = true;
+            dState.sx = e.clientX; dState.sy = e.clientY;
+            dState.ox = ov.offsetLeft;
+            dState.oy = ov.offsetTop;
+            e.preventDefault();
+        });
+        function onBagMove(e) {
+            if (!dState.active) return;
+            ov.style.left = (dState.ox + e.clientX - dState.sx) + 'px';
+            ov.style.top = (dState.oy + e.clientY - dState.sy) + 'px';
+        }
+        function onBagUp() { dState.active = false; }
+        document.addEventListener('mousemove', onBagMove);
+        document.addEventListener('mouseup', onBagUp);
+
+        // 关闭
+        ov.querySelector('.cos-overlay-close').addEventListener('click', function() {
+            document.removeEventListener('mousemove', onBagMove);
+            document.removeEventListener('mouseup', onBagUp);
+            ov.remove();
+        });
+
+        // 点击置顶
+        ov.addEventListener('mousedown', function() {
+            var tz = (window.__cos_topZ || 10000) + 1;
+            window.__cos_topZ = tz;
+            ov.style.zIndex = tz;
+        });
 
         setTimeout(function() {
             // 搜索过滤
@@ -250,6 +323,14 @@ var SkillSystem = (function() {
         renderHotbar();
         renderSubTools();
         GameWorld.emit('skillChanged', { skillId: skillId, skill: skill });
+
+        // 切换插件时窗口置顶
+        var win = document.querySelector('[data-skill-id="' + skillId + '"]');
+        if (win) {
+            var topZ = (window.__cos_topZ || 10000) + 1;
+            window.__cos_topZ = topZ;
+            win.style.zIndex = topZ;
+        }
     }
 
     function deactivate() {
@@ -357,11 +438,19 @@ var SkillSystem = (function() {
             });
             inner.appendChild(el);
 
-            // 每5个加个分隔符
-            if ((i + 1) % 5 === 0 && i < skillOrder.length - 1) {
-                var sep = document.createElement('div');
-                sep.className = 'cos-hotbar-sep';
-                inner.appendChild(sep);
+            // 按颜色分组加分隔符（检测 icon 中的 color 值）
+            if (i > 0) {
+                var prevColor = 'default';
+                var m1 = skills[skillOrder[i-1]].icon.match(/color:#([a-f0-9]+)/i);
+                if (m1) prevColor = m1[1];
+                var curColor = 'default';
+                var m2 = skill.icon.match(/color:#([a-f0-9]+)/i);
+                if (m2) curColor = m2[1];
+                if (prevColor !== curColor) {
+                    var sep = document.createElement('div');
+                    sep.className = 'cos-hotbar-sep';
+                    inner.appendChild(sep);
+                }
             }
         });
 
@@ -371,10 +460,33 @@ var SkillSystem = (function() {
         nameEl.textContent = activeSkill ? skills[activeSkill].name : '';
         inner.appendChild(nameEl);
 
-        // 商店按钮（始终显示在最右边）
+        // 云盘 + 商店（分隔符在最右边）
         var sep = document.createElement('div');
         sep.className = 'cos-hotbar-sep';
         inner.appendChild(sep);
+        // 盘 → 包
+        var cdBtn = document.createElement('div');
+        cdBtn.className = 'cos-skill cos-skill-store';
+        cdBtn.style.cssText = 'background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);';
+        cdBtn.innerHTML = '<span style="font-size:14px;font-weight:bold;color:#38bdf8;">盘</span>';
+        cdBtn.addEventListener('click', function() {
+            if (typeof CosCloudDrive !== 'undefined') CosCloudDrive.open();
+        });
+        cdBtn.addEventListener('mouseenter', function() {
+            tip.innerHTML = '<b>本地云盘</b><br>所有插件的共享素材箱';
+            tip.classList.add('visible');
+        });
+        cdBtn.addEventListener('mousemove', function(e) {
+            var rect = cdBtn.getBoundingClientRect();
+            tip.style.left = (rect.left + rect.width / 2) + 'px';
+            tip.style.top = (rect.top - 8) + 'px';
+            tip.style.transform = 'translate(-50%, -100%)';
+        });
+        cdBtn.addEventListener('mouseleave', function() {
+            tip.classList.remove('visible');
+        });
+        inner.appendChild(cdBtn);
+
         var storeBtn = document.createElement('div');
         storeBtn.className = 'cos-skill cos-skill-store';
         storeBtn.style.cssText = 'background:linear-gradient(135deg,rgba(240,160,80,0.3),rgba(240,160,80,0.15));border:2px solid rgba(240,160,80,0.6);box-shadow:0 0 12px rgba(240,160,80,0.25);';

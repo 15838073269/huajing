@@ -20,7 +20,7 @@ var Mp42SpritesSkill = {
     // ===== 基本信息 =====
     id: 'mp42sprites',
     name: '视频序列帧',
-    icon: '帧',
+    icon: '<span style="color:#ef4444;">帧</span>',
     description: '视频帧提取+预览+下载',
     key: '4',
 
@@ -771,10 +771,14 @@ var Mp42SpritesSkill = {
                 processedFrames.forEach(function(canvas, i) {
                     stripCtx.drawImage(canvas, i * firstFrame.width, 0);
                 });
+                var stripDataURL = stripCanvas.toDataURL('image/png');
                 var link = document.createElement('a');
                 link.download = 'sequence_strip.png';
-                link.href = stripCanvas.toDataURL('image/png');
+                link.href = stripDataURL;
                 link.click();
+                if (typeof CosCloudDrive !== 'undefined') {
+                    CosCloudDrive.add('序列图 ' + new Date().toLocaleTimeString(), '视频抽帧', stripDataURL);
+                }
                 return;
             }
 

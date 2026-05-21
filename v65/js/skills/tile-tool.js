@@ -15,7 +15,7 @@ var TileToolSkill = {
     // ===== 基本信息 =====
     id: 'tile-tool',
     name: '抠图',
-    icon: '抠',
+    icon: '<span style="color:#ef4444;">抠</span>',
     description: '异形拆分+合并拼图，支持套索辅助内扣',
     key: '8',
 
@@ -523,12 +523,16 @@ var TileToolSkill = {
             '</div>' +
             '<div class="tt-section">' +
                 '<div class="tt-step-title"><span class="tt-step-num">1</span> 上传图片</div>' +
-                '<div class="tt-upload-zone" id="ttSplitUpload">' +
+                '<div style="display:flex;gap:6px;align-items:stretch;">' +
+                '<div class="tt-upload-zone" id="ttSplitUpload" style="flex:1;margin-bottom:0;">' +
                     '<div class="tt-icon">📁</div>' +
                     '<p>点击或拖拽上传素材图</p>' +
                     '<p style="font-size:10px;margin-top:3px">支持 PNG / JPG / WebP</p>' +
                     '<input type="file" id="ttSplitFile" accept="image/*">' +
                 '</div>' +
+                '<div class="tt-cloud-split" style="display:flex;align-items:center;justify-content:center;' +
+                'font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(251,191,36,0.3);' +
+                'background:rgba(251,191,36,0.08);color:#fbbf24;cursor:pointer;flex-shrink:0;" title="从云盘选择">盘导入</div></div>' +
             '</div>' +
             '<!-- GRID MODE PANEL -->' +
             '<div id="ttGridPanel" style="display:none">' +
@@ -668,6 +672,7 @@ var TileToolSkill = {
                 '</label>' +
                 '<div class="tt-btn-group" style="flex-wrap:wrap;gap:4px;margin-top:8px">' +
                     '<button class="tt-btn tt-btn-success" data-action="splitAndDownload" id="ttSplitBtn" disabled>拆分下载</button>' +
+                    '<button class="tt-btn tt-cloud-split-export" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(56,189,248,0.2);background:rgba(56,189,248,0.08);color:#38bdf8;cursor:pointer;margin-left:4px;">盘导出</button>' +
                     '<button class="tt-btn tt-btn-primary" data-action="pushToMerge" id="ttPushMergeBtn" disabled>推送合并</button>' +
                 '</div>' +
             '</div>' +
@@ -676,12 +681,16 @@ var TileToolSkill = {
         '<div class="tt-panel" id="ttMergePanel">' +
             '<div class="tt-section">' +
                 '<div class="tt-section-title">上传素材</div>' +
-                '<div class="tt-upload-zone" id="ttMergeUpload">' +
+                '<div style="display:flex;gap:6px;align-items:stretch;">' +
+                '<div class="tt-upload-zone" id="ttMergeUpload" style="flex:1;margin-bottom:0;">' +
                     '<div class="tt-icon">📁</div>' +
                     '<p>点击或拖拽上传多张素材</p>' +
                     '<p style="font-size:10px;margin-top:3px">支持多选 PNG / JPG / WebP</p>' +
                     '<input type="file" id="ttMergeFiles" accept="image/*" multiple>' +
                 '</div>' +
+                '<div class="tt-cloud-merge" style="display:flex;align-items:center;justify-content:center;' +
+                'font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(251,191,36,0.3);' +
+                'background:rgba(251,191,36,0.08);color:#fbbf24;cursor:pointer;flex-shrink:0;" title="从云盘选择">盘导入</div></div>' +
                 '<p id="ttMergeCount" style="font-size:11px;color:#aaa;text-align:center"></p>' +
             '</div>' +
             '<div class="tt-section">' +
@@ -745,8 +754,9 @@ var TileToolSkill = {
                     '<button class="tt-btn tt-btn-secondary tt-btn-sm" data-action="appendMerge">➕ 追加</button>' +
                 '</div>' +
             '</div>' +
-            '<div class="tt-section">' +
+            '<div class="tt-section" style="display:flex;gap:6px;flex-wrap:wrap;">' +
                 '<button class="tt-btn tt-btn-success" data-action="mergeAndDownload" id="ttMergeBtn" disabled>🔗 合并并下载</button>' +
+                '<button class="tt-btn tt-cloud-merge-export" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(56,189,248,0.2);background:rgba(56,189,248,0.08);color:#38bdf8;cursor:pointer;">盘导出</button>' +
             '</div>' +
         '</div>';
     },
@@ -927,6 +937,20 @@ var TileToolSkill = {
             if (e.dataTransfer.files[0]) self._loadSplitImage(e.dataTransfer.files[0]);
         });
 
+        // 从云盘导入拆分图
+        var cloudSplit = overlay.querySelector('.tt-cloud-split');
+        if (cloudSplit) {
+            cloudSplit.addEventListener('click', function() {
+                if (typeof CosCloudDrive === 'undefined') return;
+                CosCloudDrive.setOnSelect(function(item) {
+                    self._loadSplitImageDataURL(item.dataURL);
+                    CosCloudDrive._overlay.style.display = 'none';
+                    CosCloudDrive.setOnSelect(null);
+                });
+                CosCloudDrive.open();
+            });
+        }
+
         // Range inputs - update display values
         var rangePairs = [
             ['outlineTolerance', 'outlineTolVal'],
@@ -1059,6 +1083,47 @@ var TileToolSkill = {
             mergeUploadZone.classList.remove('dragover');
             if (e.dataTransfer.files.length > 0) self._handleMergeFiles(e.dataTransfer.files);
         });
+
+        // 拆分盘导出（只存云盘）
+        var cloudSplitExp = overlay.querySelector('.tt-cloud-split-export');
+        if (cloudSplitExp) {
+            cloudSplitExp.addEventListener('click', function() {
+                if (!self.state.originalImage) { self._showToast('请先上传图片'); return; }
+                var c = document.createElement('canvas');
+                c.width = self.state.originalImage.width;
+                c.height = self.state.originalImage.height;
+                var ctx = c.getContext('2d');
+                if (self.state.processedImageData) ctx.putImageData(self.state.processedImageData, 0, 0);
+                else ctx.drawImage(self.state.originalImage, 0, 0);
+                if (typeof CosCloudDrive !== 'undefined') {
+                    CosCloudDrive.add('拆分图 ' + new Date().toLocaleTimeString(), '素材拆分合并', c.toDataURL('image/png'));
+                }
+                self._showToast('已存入云盘');
+            });
+        }
+
+        // 合并盘导出（只存云盘）
+        var cloudMergeExp = overlay.querySelector('.tt-cloud-merge-export');
+        if (cloudMergeExp) {
+            cloudMergeExp.addEventListener('click', function() {
+                if (self.state.mergeImages.length === 0) { self._showToast('请先上传素材'); return; }
+                self._mergeAndDownload(true);
+            });
+        }
+
+        // 从云盘导入合并图
+        var cloudMerge = overlay.querySelector('.tt-cloud-merge');
+        if (cloudMerge) {
+            cloudMerge.addEventListener('click', function() {
+                if (typeof CosCloudDrive === 'undefined') return;
+                CosCloudDrive.setOnSelect(function(item) {
+                    self._handleMergeDataURL(item.dataURL);
+                    CosCloudDrive._overlay.style.display = 'none';
+                    CosCloudDrive.setOnSelect(null);
+                });
+                CosCloudDrive.open();
+            });
+        }
 
         // 右侧区域拖拽上传
         var splitView = overlay.querySelector('#ttSplitView');
@@ -1213,6 +1278,29 @@ var TileToolSkill = {
     // ========================================
     //   图片加载
     // ========================================
+
+    _loadSplitImageDataURL: function(dataURL) {
+        var self = this;
+        var img = new Image();
+        img.onload = function() {
+            self.state.originalImage = img;
+            self.state.processedImageData = null;
+            self.state.regions = [];
+            self.state.selectedRegion = -1;
+            self.state.innerSelectedRegions = {};
+            self._gridColLines = null;
+            self._gridRowLines = null;
+            self._gridRegions = null;
+            self._fitImageToView(img);
+            self._drawMain();
+            self._drawOverlay();
+            self._updateRegionListUI();
+            self._q('#ttSplitEmpty').style.display = 'none';
+            self._q('#ttCanvasWrapper').style.display = 'inline-block';
+            self._q('#ttSplitBtn').disabled = false;
+        };
+        img.src = dataURL;
+    },
 
     _loadSplitImage: function(file) {
         var self = this;
@@ -2837,6 +2925,11 @@ var TileToolSkill = {
             zip.file('tile_' + String(i + 1).padStart(3, '0') + ext, dataUrl.split(',')[1], { base64: true });
         });
 
+        // 保存原图到云盘
+        if (typeof CosCloudDrive !== 'undefined') {
+            CosCloudDrive.add('拆分原图 ' + new Date().toLocaleTimeString(), '素材拆分合并', srcCanvas.toDataURL('image/png'));
+        }
+
         zip.generateAsync({ type: 'blob' }).then(function(blob) {
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
@@ -2928,6 +3021,17 @@ var TileToolSkill = {
     //   合并模式
     // ========================================
 
+    _handleMergeDataURL: function(dataURL) {
+        var self = this;
+        var img = new Image();
+        img.onload = function() {
+            self.state.mergeImages.push({ name: '云盘-' + (self.state.mergeImages.length + 1), img: img, dataUrl: dataURL });
+            self._updateMergePreview();
+            self._showToast('已添加云盘图片');
+        };
+        img.src = dataURL;
+    },
+
     _handleMergeFiles: function(files) {
         var self = this;
         var promises = Array.from(files).map(function(file) {
@@ -3008,7 +3112,7 @@ var TileToolSkill = {
         this._showToast('已按' + (by === 'name' ? '名称' : '尺寸') + '排序');
     },
 
-    _mergeAndDownload: function() {
+    _mergeAndDownload: function(cloudOnly) {
         if (this.state.mergeImages.length === 0) return;
         var cols = parseInt(this._q('#mergeCols').value);
         var padX = parseInt(this._q('#mergePadX').value);
@@ -3059,8 +3163,13 @@ var TileToolSkill = {
         this._q('#ttMergeResultContainer').style.display = 'block';
 
         var dataUrl = canvas.toDataURL(mimeType, 0.95);
-        var a = document.createElement('a');
-        a.href = dataUrl; a.download = 'tilemap_merged' + ext; a.click();
-        this._showToast('合并完成! (' + canvasW + '\u00d7' + canvasH + ')');
+        if (!cloudOnly) {
+            var a = document.createElement('a');
+            a.href = dataUrl; a.download = 'tilemap_merged' + ext; a.click();
+        }
+        if (typeof CosCloudDrive !== 'undefined') {
+            CosCloudDrive.add('合拼图 ' + new Date().toLocaleTimeString(), '素材拆分合并', dataUrl);
+        }
+        this._showToast(cloudOnly ? '已存入云盘' : '合并完成! (' + canvasW + '\u00d7' + canvasH + ')');
     }
 };

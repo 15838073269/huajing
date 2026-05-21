@@ -84,7 +84,7 @@ var NineSliceSkill = {
 
     id: 'nine-slice',
     name: '九宫切片',
-    icon: '切',
+    icon: '<span style="color:#ef4444;">切</span>',
     category: '图片处理',
     description: '九宫格切片 - 拖拽彩线调整边距，实时预览缩放电导出',
 
@@ -185,34 +185,50 @@ var NineSliceSkill = {
         // ===== Header (two sides) =====
         var header = document.createElement('div');
         header.className = 'ns-header';
+        header.style.flexDirection = 'column';
 
-        // Left header
-        var hsL = document.createElement('div');
-        hsL.className = 'ns-hside';
-        hsL.innerHTML =
-            '<h1 class="ns-h1">九宫切片</h1>' +
-            '<label class="ns-file-label" id="nsUploadLabel">选图</label>' +
+        // 第1行：左侧标题 + 右侧关闭按钮
+        var row1 = document.createElement('div');
+        row1.style.cssText = 'display:flex;align-items:center;padding:6px 10px 0;';
+        row1.innerHTML =
+            '<h1 class="ns-h1" style="margin:0;flex:1;font-size:16px;">九宫切片</h1>' +
+            '<button class="ns-btn" id="nsCloseBtn" style="background:rgba(220,80,60,.2);border-color:rgba(220,80,60,.3);color:#e87060;padding:3px 12px;font-size:12px;flex-shrink:0;">关</button>';
+        header.appendChild(row1);
+
+        // 第2行左侧：选图 + 盘导入 + 边距 + 重置
+        var row2L = document.createElement('div');
+        row2L.style.cssText = 'flex:1;display:flex;align-items:center;gap:6px;padding:4px 10px 6px;flex-wrap:wrap;border-radius:6px;background:rgba(100,160,255,0.04);';
+        row2L.innerHTML =
+            '<label class="ns-file-label" id="nsUploadLabel" style="cursor:pointer;flex-shrink:0;">选图</label>' +
+            '<span class="ns-cloud-import" style="font-size:13px;padding:3px 8px;border-radius:5px;border:1px solid rgba(251,191,36,0.35);background:rgba(251,191,36,0.1);color:#fbbf24;cursor:pointer;" title="从云盘选择">盘导入</span>' +
             '<input type="file" id="nsFileInput" accept="image/*" style="display:none">' +
+            '<span style="color:#475569;width:1px;height:20px;background:rgba(100,160,255,0.1);margin:0 2px;"></span>' +
             '<div class="ns-ctrl"><span class="ns-color-dot" style="background:#ff4757"></span><input type="number" class="ns-input ns-input-red" id="nsMarginT" min="0" value="20"></div>' +
             '<div class="ns-ctrl"><span class="ns-color-dot" style="background:#ffa502"></span><input type="number" class="ns-input ns-input-red" id="nsMarginB" min="0" value="20"></div>' +
             '<div class="ns-ctrl"><span class="ns-color-dot" style="background:#1e90ff"></span><input type="number" class="ns-input ns-input-red" id="nsMarginL" min="0" value="20"></div>' +
             '<div class="ns-ctrl"><span class="ns-color-dot" style="background:#2ed573"></span><input type="number" class="ns-input ns-input-red" id="nsMarginR" min="0" value="20"></div>' +
-            '<button class="ns-btn ns-btn-danger" id="nsResetSliceBtn" style="padding:5px 12px;font-size:13px">重置</button>';
-        header.appendChild(hsL);
+            '<button class="ns-btn ns-btn-danger" id="nsResetSliceBtn" style="padding:3px 10px;font-size:12px">重置</button>';
+        // 第2行：左右并排
+        var row2 = document.createElement('div');
+        row2.style.cssText = 'display:flex;align-items:stretch;gap:10px;padding:0 10px 4px;';
+        row2L.style.flex = '1';
+        row2L.style.padding = '0';
+        row2.appendChild(row2L);
 
-        // Right header
-        var hsR = document.createElement('div');
-        hsR.className = 'ns-hside';
-        hsR.innerHTML =
-            '<span id="nsImgInfo" style="font-size:11px;color:#6a9fc0;margin-right:auto"></span>' +
+        // 第2行右侧：图片信息 + 宽高 + 导出 + 盘导出
+        var row2R = document.createElement('div');
+        row2R.style.cssText = 'flex:1;display:flex;align-items:center;gap:6px;padding:0;justify-content:flex-end;flex-wrap:wrap;border-radius:6px;';
+        row2R.innerHTML =
+            '<span id="nsImgInfo" style="font-size:11px;color:#6a9fc0;"></span>' +
             '<span style="font-size:12px;color:#aaa">宽</span>' +
-            '<div class="ns-ctrl"><input type="number" class="ns-dim-input" id="nsPW" min="1" value="300"></div>' +
+            '<div class="ns-ctrl"><input type="number" class="ns-dim-input" id="nsPW" min="1" value="300" style="width:100px;"></div>' +
             '<span style="font-size:12px;color:#aaa">高</span>' +
-            '<div class="ns-ctrl"><input type="number" class="ns-dim-input" id="nsPH" min="1" value="300"></div>' +
-            '<button class="ns-btn ns-btn-blue" id="nsResetPreviewBtn">重置</button>' +
-            '<button class="ns-btn ns-btn-blue" id="nsExportBtn">导出</button>' +
-            '<button class="ns-btn" id="nsCloseBtn" style="background:rgba(220,80,60,.2);border-color:rgba(220,80,60,.3);color:#e87060;margin-left:4px">关</button>';
-        header.appendChild(hsR);
+            '<div class="ns-ctrl"><input type="number" class="ns-dim-input" id="nsPH" min="1" value="300" style="width:100px;"></div>' +
+            '<button class="ns-btn ns-btn-blue" id="nsResetPreviewBtn" style="padding:3px 10px;font-size:12px">重置</button>' +
+            '<button class="ns-btn ns-btn-blue" id="nsExportBtn" style="padding:3px 12px;font-size:12px">导出</button>' +
+            '<span class="ns-cloud-export" style="font-size:13px;padding:3px 8px;border-radius:5px;border:1px solid rgba(56,189,248,0.35);background:rgba(56,189,248,0.1);color:#38bdf8;cursor:pointer;" title="导出并存入本地云盘">盘导出</span>';
+        row2.appendChild(row2R);
+        header.appendChild(row2);
         ov.appendChild(header);
 
         // ===== Body (two panels) =====
@@ -346,6 +362,52 @@ var NineSliceSkill = {
         ov.querySelector('#nsFileInput').addEventListener('change', function(e) {
             if (e.target.files.length > 0) self._loadFile(e.target.files[0]);
         });
+        // 盘导出（只存云盘，不下载）
+        var cloudExp = ov.querySelector('.ns-cloud-export');
+        if (cloudExp) {
+            cloudExp.addEventListener('click', function() {
+                if (!self._img) return;
+                var img = self._img, m = self._margins;
+                var pw = self._previewW, ph = self._previewH;
+                var off = document.createElement('canvas');
+                off.width = pw; off.height = ph;
+                var ctx = off.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                var sx = [0, m.left, img.naturalWidth-m.right, img.naturalWidth];
+                var sy = [0, m.top, img.naturalHeight-m.bottom, img.naturalHeight];
+                var dx = [0, m.left, pw-m.right, pw];
+                var dy = [0, m.top, ph-m.bottom, ph];
+                for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) {
+                    var sw = sx[c+1]-sx[c], sh = sy[r+1]-sy[r];
+                    var dw2 = dx[c+1]-dx[c], dh2 = dy[r+1]-dy[r];
+                    if (sw>0 && sh>0 && dw2>0 && dh2>0) ctx.drawImage(img, sx[c], sy[r], sw, sh, dx[c], dy[r], dw2, dh2);
+                }
+                var dataURL = off.toDataURL('image/png');
+                if (typeof CosCloudDrive !== 'undefined') {
+                    CosCloudDrive.add('九宫格 ' + new Date().toLocaleTimeString(), '九宫切片', dataURL);
+                }
+                if (typeof showToast === 'function') showToast('已存入云盘');
+            });
+        }
+
+        // 从云盘导入
+        var cloudBtn = ov.querySelector('.ns-cloud-import');
+        if (cloudBtn) {
+            cloudBtn.addEventListener('click', function() {
+                if (typeof CosCloudDrive === 'undefined') { console.warn('CosCloudDrive not loaded'); return; }
+                try {
+                    CosCloudDrive.setOnSelect(function(item) {
+                        try {
+                            self._loadFileDataURL(item.dataURL);
+                            if (CosCloudDrive._overlay) CosCloudDrive._overlay.style.display = 'none';
+                            CosCloudDrive.setOnSelect(null);
+                        } catch(e) { console.error('Cloud import error:', e); }
+                    });
+                    CosCloudDrive.open();
+                } catch(e) { console.error('Cloud drive open error:', e); }
+            });
+        }
 
         // Margin inputs
         function readMargins() {
@@ -588,6 +650,13 @@ var NineSliceSkill = {
     // ========================================
     //   Image loading
     // ========================================
+
+    _loadFileDataURL: function(dataURL) {
+        var self = this;
+        var raw = new Image();
+        raw.onload = function() { self._trimTransparency(raw, function(img) { self._setupImage(img); }); };
+        raw.src = dataURL;
+    },
 
     _loadFile: function(file) {
         var self = this;
@@ -835,10 +904,14 @@ var NineSliceSkill = {
             if (sw>0 && sh>0 && dw2>0 && dh2>0) ctx.drawImage(img, sx[c], sy[r], sw, sh, dx[c], dy[r], dw2, dh2);
         }
 
+        var resultDataURL = off.toDataURL('image/png');
         var link = document.createElement('a');
         link.download = '九宫格_'+pw+'x'+ph+'.png';
-        link.href = off.toDataURL('image/png');
+        link.href = resultDataURL;
         link.click();
+        if (typeof CosCloudDrive !== 'undefined') {
+            CosCloudDrive.add('九宫格 ' + new Date().toLocaleTimeString(), '九宫切片', resultDataURL);
+        }
         if (typeof showToast === 'function') showToast('已导出 '+pw+'x'+ph);
     },
 

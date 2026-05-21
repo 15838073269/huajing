@@ -101,18 +101,53 @@ _destroy: function() {
 
 适用于有复杂 UI 的插件（裁剪、像素画、视频抽帧等）。
 
+所有独立窗口**必须**支持：
+1. **标题栏拖拽移动**
+2. **四角四边拖拽缩放**（使用 `WindowHelper.makeResizable`）
+
 ```javascript
 _createOverlay: function() {
+    var self = this;
     var ov = document.createElement('div');
     ov.className = 'my-overlay';
     ov.setAttribute('data-skill-id', this.id);  // ← 必须！点击自动切回插件
-    ov.style.cssText = 'position:fixed;width:800px;height:500px;z-index:9999;' +
-        'background:#0f3460;color:#eee;border-radius:10px;' +
+    ov.style.cssText = 'position:fixed;z-index:9999;' +
+        'background:#0f1525;color:#e8edf5;border-radius:12px;' +
+        'border:1px solid rgba(100,160,255,0.15);' +
         'box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden;' +
-        'left:' + Math.max(20, (window.innerWidth - 800) / 2) + 'px;' +
-        'top:' + Math.max(20, (window.innerHeight - 500) / 2) + 'px;';
+        'display:flex;flex-direction:column;font-size:13px;' +
+        'min-width:400px;min-height:300px;' +
+        'left:40px;top:40px;';
+    ov.innerHTML =
+        '<div class="my-header" style="display:flex;align-items:center;' +
+        'justify-content:space-between;padding:8px 14px;cursor:move;user-select:none;flex-shrink:0;">' +
+        '<span style="font-weight:600;color:#38bdf8;">我的插件</span>' +
+        '<span class="my-close" style="cursor:pointer;color:#94a3b8;padding:2px 6px;">×</span></div>' +
+        '<div class="my-body" style="flex:1;overflow:auto;padding:10px 14px;"></div>';
     document.body.appendChild(ov);
     this._overlay = ov;
+
+    // 四角四边缩放 + localStorage 记忆尺寸
+    if (typeof WindowHelper !== 'undefined') {
+        WindowHelper.makeResizable(ov, { minWidth: 400, minHeight: 300, storeKey: 'my-window-rect' });
+    }
+
+    // 标题栏拖拽
+    var d = { active: false, sx: 0, sy: 0, ox: 0, oy: 0 };
+    ov.querySelector('.my-header').addEventListener('mousedown', function(e) {
+        if (e.target.closest('.my-close')) return;
+        d.active = true;
+        d.sx = e.clientX; d.sy = e.clientY;
+        var r = ov.getBoundingClientRect();
+        d.ox = r.left; d.oy = r.top;
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+        if (!d.active) return;
+        ov.style.left = (d.ox + e.clientX - d.sx) + 'px';
+        ov.style.top = (d.oy + e.clientY - d.sy) + 'px';
+    });
+    document.addEventListener('mouseup', function() { d.active = false; });
 }
 ```
 
@@ -120,8 +155,11 @@ _createOverlay: function() {
 - `position:fixed`，不遮挡画布
 - `data-skill-id` 属性（点击窗口自动切回对应插件）
 - `z-index:9999`
-- 深色主题配色（见下方配色表）
-- deactivate 不隐藏窗口
+- **可拖拽移动**（标题栏 mousedown + document mousemove）
+- **四角四边可缩放**（调用 `WindowHelper.makeResizable`）
+- **禁用右键菜单**（`ov.addEventListener('contextmenu', function(e) { e.preventDefault(); })`）
+- 深色主题配色
+- `deactivate` 不隐藏窗口
 - 关闭按钮调 `_destroy()` + `SkillSystem.deactivate()`
 
 ### 类型 B：世界层元素

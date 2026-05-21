@@ -38,6 +38,9 @@ var PLUGIN_LIST = [
 
     // === 动画 ===
     'js/skills/spine-animate.js', // 🦴 骨骼动画 - FK/IK/约束/缓动/弹性物理
+
+    // === 叠图 ===
+    'js/skills/tile-replace.js',  // 🧩 叠图替换 - Marching Squares 自动瓦片
 ];
 
 /**
@@ -61,5 +64,6 @@ var PLUGIN_NUMBERS = {
     'pixel-paint': 14,
     'spine-animate': 15,
     'audio-cleaner': 16,
-    'nine-slice': 17
+    'nine-slice': 17,
+    'tile-replace': 18
 };

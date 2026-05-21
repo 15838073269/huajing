@@ -16,7 +16,7 @@ var ImageCropSkill = {
     // ===== 基本信息 =====
     id: 'image-crop',
     name: '图片裁剪',
-    icon: '剪',
+    icon: '<span style="color:#ef4444;">剪</span>',
     category: '图片处理',
     description: '宽高比预设、旋转、网格辅助裁剪',
     key: '4',
@@ -214,8 +214,15 @@ var ImageCropSkill = {
         return '' +
             '<div class="ic-section">' +
                 '<div class="ic-section-title">上传图片</div>' +
-                '<button class="ic-btn ic-btn-primary" id="icUploadBtn" style="width:100%">选择图片</button>' +
+                '<div style="display:flex;gap:4px;">' +
+                '<button class="ic-btn ic-btn-primary" id="icUploadBtn" style="flex:1;">选择图片</button>' +
+                '<button class="ic-btn ic-btn-sm" id="icCloudImport" style="font-size:11px;padding:7px 8px;border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.08);color:#fbbf24;">盘导入</button>' +
+                '</div>' +
                 '<input type="file" id="icFileInput" accept="image/*" style="display:none">' +
+                '<div style="display:flex;align-items:center;gap:6px;margin-top:4px;">' +
+                '<label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;cursor:pointer;">' +
+                '<input type="checkbox" id="icCloudAuto" checked> 自动存入云盘</label>' +
+                '<button class="ic-btn ic-btn-sm" id="icCloudExport" style="font-size:10px;padding:3px 6px;border:1px solid rgba(56,189,248,0.2);background:rgba(56,189,248,0.08);color:#38bdf8;">盘导出</button></div>' +
             '</div>' +
             '<div class="ic-section">' +
                 '<div class="ic-section-title">宽高比</div>' +
@@ -361,6 +368,31 @@ var ImageCropSkill = {
             }
         });
 
+        // 从云盘导入
+        ov.querySelector('#icCloudImport').addEventListener('click', function() {
+            if (typeof CosCloudDrive === 'undefined') return;
+            CosCloudDrive.setOnSelect(function(item) {
+                self._loadImageDataURL(item.dataURL);
+                CosCloudDrive._overlay.style.display = 'none';
+                CosCloudDrive.setOnSelect(null);
+            });
+            CosCloudDrive.open();
+        });
+
+        // 自动存入云盘开关
+        var cb = ov.querySelector('#icCloudAuto');
+        if (cb) {
+            self._icCloudAuto = cb.checked;
+            cb.addEventListener('change', function() { self._icCloudAuto = this.checked; });
+        }
+        // 盘导出：裁剪并存入云盘（不下载）
+        var cloudExpBtn = ov.querySelector('#icCloudExport');
+        if (cloudExpBtn) {
+            cloudExpBtn.addEventListener('click', function() {
+                self._cropAndExportToCloud();
+            });
+        }
+
         // 拖放到画布区域
         var mainArea = ov.querySelector('#icMain');
         mainArea.addEventListener('dragover', function(e) {
@@ -464,6 +496,43 @@ var ImageCropSkill = {
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
+    },
+
+    _cropAndExportToCloud: function() {
+        var st = this._state;
+        if (!st.cropBox || !st.originalImage) {
+            if (typeof showToast === 'function') showToast('请先上传图片并设置裁剪区域');
+            return;
+        }
+        try {
+            var tempCanvas = document.createElement('canvas');
+            tempCanvas.width = st.canvas.width;
+            tempCanvas.height = st.canvas.height;
+            var tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(st.originalImage, 0, 0, st.canvas.width, st.canvas.height);
+            var scaleX = st.originalImage.width / st.canvas.width;
+            var scaleY = st.originalImage.height / st.canvas.height;
+            var resultCanvas = document.createElement('canvas');
+            var resultCtx = resultCanvas.getContext('2d');
+            resultCanvas.width = Math.round(st.cropBox.width * scaleX);
+            resultCanvas.height = Math.round(st.cropBox.height * scaleY);
+            resultCtx.drawImage(tempCanvas, st.cropBox.x * scaleX, st.cropBox.y * scaleY,
+                st.cropBox.width * scaleX, st.cropBox.height * scaleY, 0, 0, resultCanvas.width, resultCanvas.height);
+            var dataURL = resultCanvas.toDataURL('image/png');
+            if (typeof CosCloudDrive !== 'undefined') {
+                CosCloudDrive.add('裁剪图 ' + new Date().toLocaleTimeString(), '图片剪辑', dataURL);
+            }
+            if (typeof showToast === 'function') showToast('已存入云盘');
+        } catch (err) {
+            console.error('Cloud export error:', err);
+        }
+    },
+
+    _loadImageDataURL: function(dataURL) {
+        var self = this;
+        var img = new Image();
+        img.onload = function() { self._loadImage(img); };
+        img.src = dataURL;
     },
 
     _loadImage: function(img) {
@@ -957,10 +1026,16 @@ var ImageCropSkill = {
             resultCtx.drawImage(tempCanvas, actualX, actualY, actualW, actualH, 0, 0, resultCanvas.width, resultCanvas.height);
 
             // 下载
+            var resultDataURL = resultCanvas.toDataURL('image/png');
             var link = document.createElement('a');
             link.download = 'cropped_' + Date.now() + '.png';
-            link.href = resultCanvas.toDataURL('image/png');
+            link.href = resultDataURL;
             link.click();
+
+            // 云盘
+            if (typeof CosCloudDrive !== 'undefined' && this._icCloudAuto) {
+                CosCloudDrive.add('裁剪图 ' + new Date().toLocaleTimeString(), '图片剪辑', resultDataURL);
+            }
 
             if (typeof showToast === 'function') showToast('裁剪完成，已下载');
         } catch (err) {

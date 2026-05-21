@@ -73,10 +73,19 @@
             }
         }
         GameStorage.save(state);
+        // beforeunload 场景：同步写 localStorage 兜底
+        try { localStorage.setItem('cos_v65_backup', JSON.stringify(state)); } catch(e) {}
     }
 
     async function restoreState() {
         var state = await GameStorage.load();
+        // IndexedDB 无数据时尝试 localStorage 兜底
+        if (!state) {
+            try {
+                var bak = localStorage.getItem('cos_v65_backup');
+                if (bak) { state = JSON.parse(bak); localStorage.removeItem('cos_v65_backup'); }
+            } catch(e) {}
+        }
         if (!state) {
             // 首次使用：自动安装所有可用插件
             var allPlugins = SkillSystem.getPlugins();
