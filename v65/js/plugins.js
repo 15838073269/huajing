@@ -8,7 +8,6 @@
 var PLUGIN_LIST = [
     // === 工具类 ===
     'js/skills/calculator.js',      // 🔢 高精度计算器 - 科学计算+变量+表达式解析
-    'js/skills/reader.js',          // 📝 文本阅读器 - 拖放文本文件创建卡片
     'js/skills/mao-quotes.js',      // 📕 信仰语录 - 每60秒随机展示
     'js/skills/prompt-template.js', // 💬 提示词模板 - AI绘画提示词[变量]管理
     'js/skills/nav-bookmarks.js',   // 🧭 导航网址 - 网址收藏+标签分类
@@ -26,9 +25,6 @@ var PLUGIN_LIST = [
 
     // === 绘图 ===
     'js/skills/drawing.js',         // 🖌️ 画板 - SVG画笔+橡皮擦
-
-    // === 文件浏览 ===
-    'js/skills/folder-browser.js',  // 📂 文件夹浏览 - 文件夹拖放+网格预览
 
     // === 编辑器 ===
     'js/skills/node-editor.js',  // 📋 节点编辑器 - 分镜式节点编辑
@@ -52,7 +48,6 @@ var PLUGIN_LIST = [
  */
 var PLUGIN_NUMBERS = {
     'calculator': 1,
-    'reader': 2,
     'mao-quotes': 3,
     'prompt-template': 4,
     'nav-bookmarks': 5,
@@ -62,7 +57,6 @@ var PLUGIN_NUMBERS = {
     'music': 9,
     'video': 10,
     'drawing': 11,
-    'folder-browser': 12,
     'node-editor': 13,
     'pixel-paint': 14,
     'spine-animate': 15,

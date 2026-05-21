@@ -340,9 +340,28 @@ var CosCloudDrive = {
         });
     },
 
+    // 在画布顶部子工具栏添加清空画布按钮
+    _addSubToolBtn: function() {
+        var subtools = document.getElementById('cos-subtools');
+        if (!subtools || document.getElementById('cd-clear-canvas-btn')) return;
+        var btn = document.createElement('button');
+        btn.id = 'cd-clear-canvas-btn';
+        btn.className = 'cos-hud-btn';
+        btn.textContent = '清空画布';
+        btn.title = '删除画布上所有从云盘放置的图片';
+        btn.style.cssText = 'font-size:10px;padding:2px 8px;';
+        var self = this;
+        btn.addEventListener('click', function() { self._clearCanvasImages(); });
+        subtools.appendChild(btn);
+    },
+
     // 初始化（从 IndexedDB 加载，localStorage 作为快速缓存兜底）
     init: function() {
         var self = this;
+        // 注册拖图片到画布
+        this._registerCanvasDrop();
+        // 添加清空画布按钮到顶部子工具栏
+        this._addSubToolBtn();
         // 先尝试 localStorage 快速展示（同步）
         try {
             var raw = localStorage.getItem('cos_cloud_drive_cache');
@@ -457,6 +476,123 @@ var CosCloudDrive = {
         }
     },
 
+    // ===== 画布集成 =====
+
+    // 从云盘拖图片到画布
+    _placeOnCanvas: function(dataURL, name, clientX, clientY) {
+        if (typeof GameWorld === 'undefined') return;
+        var layer = GameWorld.getLayer && GameWorld.getLayer();
+        if (!layer) return;
+        var worldPos = GameWorld.screenToWorld(clientX, clientY);
+
+        var img = new Image();
+        img.src = dataURL;
+        img.onload = function() {
+            var w = img.naturalWidth;
+            var h = img.naturalHeight;
+
+            var el = document.createElement('div');
+            el.style.cssText = 'position:absolute;left:' + (worldPos.x - w / 2) + 'px;top:' + (worldPos.y - h / 2) + 'px;' +
+                'width:' + w + 'px;height:' + h + 'px;pointer-events:auto;cursor:grab;' +
+                'border-radius:4px;overflow:visible;';
+            el.className = 'fb-canvas-image';
+            var img2 = document.createElement('img');
+            img2.src = dataURL;
+            img2.style.cssText = 'width:100%;height:100%;display:block;pointer-events:none;border-radius:4px;';
+            el.appendChild(img2);
+            el.title = name || '图片';
+
+            // 删除按钮（按图片尺寸等比缩放）
+            var btnSize = Math.max(18, Math.min(36, Math.round(Math.min(w, h) * 0.06)));
+            var btnOffset = Math.round(btnSize * 0.4);
+            var fontSize = Math.max(10, Math.min(18, Math.round(btnSize * 0.6)));
+            var delBtn = document.createElement('button');
+            delBtn.textContent = '✕';
+            delBtn.style.cssText = 'position:absolute;top:-' + btnOffset + 'px;right:-' + btnOffset + 'px;' +
+                'width:' + btnSize + 'px;height:' + btnSize + 'px;' +
+                'background:rgba(220,80,60,0.9);color:#fff;border:none;border-radius:50%;' +
+                'font-size:' + fontSize + 'px;line-height:1;cursor:pointer;display:none;z-index:5;' +
+                'box-shadow:0 1px 4px rgba(0,0,0,0.4);';
+            delBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (el.parentNode) el.parentNode.removeChild(el);
+            });
+            el.appendChild(delBtn);
+            el.addEventListener('mouseenter', function() { delBtn.style.display = 'block'; });
+            el.addEventListener('mouseleave', function() { delBtn.style.display = 'none'; });
+
+            // 拖拽移动（同 folder-browser 逻辑）
+            var dragging = false, sx, sy, ox, oy;
+            el.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return; e.stopPropagation();
+                dragging = true; sx = e.clientX; sy = e.clientY;
+                ox = parseInt(el.style.left) || 0; oy = parseInt(el.style.top) || 0;
+                el.style.cursor = 'grabbing';
+            });
+            document.addEventListener('mousemove', function(ev) {
+                if (!dragging) return;
+                el.style.left = (ox + ev.clientX - sx) + 'px';
+                el.style.top = (oy + ev.clientY - sy) + 'px';
+            });
+            document.addEventListener('mouseup', function() {
+                if (!dragging) return; dragging = false; el.style.cursor = 'grab';
+            });
+
+            layer.appendChild(el);
+        };
+    },
+
+    // 注册画布 drop 接收（每次 open 调用，确保 canvas 已就绪）
+    _registerCanvasDrop: function() {
+        if (typeof GameWorld === 'undefined') return;
+        var target = document.getElementById('cos-world') || document.body;
+        var self = this;
+        // 移除旧监听避免重复
+        if (self._canvasDragHandler) {
+            target.removeEventListener('dragover', self._canvasDragHandler);
+        }
+        if (self._canvasDropHandler) {
+            target.removeEventListener('drop', self._canvasDropHandler);
+        }
+        self._canvasDragHandler = function(e) {
+            // 检查是否包含我们的自定义数据类型
+            var types = e.dataTransfer.types;
+            var hasImage = false;
+            if (types && types.indexOf) {
+                hasImage = types.indexOf('text/x-cos-image-id') >= 0;
+            } else if (types && types.contains) {
+                hasImage = types.contains('text/x-cos-image-id');
+            }
+            if (hasImage) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+        };
+        self._canvasDropHandler = function(e) {
+            e.preventDefault();
+            var id = e.dataTransfer.getData('text/x-cos-image-id');
+            if (!id) return;
+            var item = null;
+            for (var i = 0; i < self._items.length; i++) {
+                if (self._items[i].id === id) { item = self._items[i]; break; }
+            }
+            if (!item || !item.dataURL) return;
+            self._placeOnCanvas(item.dataURL, item.name || null, e.clientX, e.clientY);
+        };
+        target.addEventListener('dragover', self._canvasDragHandler);
+        target.addEventListener('drop', self._canvasDropHandler);
+    },
+
+    // 清空画布上的所有图片
+    _clearCanvasImages: function() {
+        if (typeof GameWorld === 'undefined') return;
+        var layer = GameWorld.getLayer && GameWorld.getLayer();
+        if (!layer) return;
+        var imgs = layer.querySelectorAll('.fb-canvas-image');
+        if (!imgs.length) return;
+        if (!confirm('确定清空画布上的所有图片？')) return;
+        for (var i = 0; i < imgs.length; i++) {
+            if (imgs[i].parentNode) imgs[i].parentNode.removeChild(imgs[i]);
+        }
+    },
+
     // 打开云盘面板
     open: function() {
         var self = this;
@@ -506,6 +642,8 @@ var CosCloudDrive = {
             '<span style="font-size:10px;color:#475569;">共 <span class="cd-count">0</span> 张</span>' +
             '<button class="cd-clearall" style="font-size:10px;padding:2px 6px;border-radius:4px;' +
             'border:1px solid rgba(248,113,113,0.2);background:transparent;color:#64748b;cursor:pointer;">清空</button>' +
+            '<button class="cd-clearcanvas" style="font-size:10px;padding:2px 6px;border-radius:4px;' +
+            'border:1px solid rgba(248,113,113,0.3);background:transparent;color:#f87171;cursor:pointer;">清空画布</button>' +
             '</div>' +
             '<div class="cd-grid" style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-wrap:wrap;align-content:start;gap:8px;"></div>';
 
@@ -583,6 +721,15 @@ var CosCloudDrive = {
             self._save();
             self._refreshGrid();
         });
+
+        // 清空画布图片
+        ov.querySelector('.cd-clearcanvas').addEventListener('click', function() {
+            self._clearCanvasImages();
+        });
+
+        // 注册画布 drop 接收（从云盘拖图片到画布）
+        // 每次 open 都重新注册，确保 target 有效
+        self._registerCanvasDrop();
 
         // 批量选择：切换多选模式
         var batchSelBtn = ov.querySelector('.cd-batchsel');
@@ -728,6 +875,12 @@ var CosCloudDrive = {
             img.draggable = false;
             thumb.appendChild(img);
             card.appendChild(thumb);
+            // 可拖拽到画布（只传 id，dataURL 太大可能被截断）
+            card.draggable = true;
+            card.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/x-cos-image-id', item.id);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
 
             // 批量选择勾选框
             if (self._isBatchSel) {
@@ -865,6 +1018,12 @@ var CosCloudDrive = {
             img.draggable = false;
             thumb.appendChild(img);
             card.appendChild(thumb);
+            // 可拖拽到画布（只传 id，dataURL 太大可能被截断）
+            card.draggable = true;
+            card.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/x-cos-image-id', item.id);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
 
             // 批量选择勾选框
             if (self._isBatchSel) {

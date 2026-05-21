@@ -888,7 +888,7 @@ var PixelPaint3D = (function() {
             '<div class="pp3d-tools" id="pp3dModeToggle">' +
             '<div class="pp3d-mode-toggle">' +
                 '<button class="pp3d-mode-btn active" data-mode="2d">2D</button>' +
-                '<button class="pp3d-mode-btn" data-mode="3d">3D</button>' +
+                '<button class="pp3d-mode-btn" data-mode="3d" disabled style="opacity:0.4;cursor:not-allowed;">3D</button>' +
             '</div>' +
             '</div></div>';
     }

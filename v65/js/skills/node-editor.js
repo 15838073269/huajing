@@ -58,6 +58,7 @@ var NodeEditorSkill = {
     activate: function(world) {
         this._world = world;
         this._layer = world.getLayer();
+        this._bindFileDrop();
 
         // 如果已有 DOM（切换回来）
         if (this._svgEl) {
@@ -142,7 +143,60 @@ var NodeEditorSkill = {
 
     // ========== 停用 ==========
     deactivate: function() {
-        // 不做任何操作，内容保持显示，只有关闭按钮才销毁
+        this._unbindFileDrop();
+    },
+
+    // ========== 文件拖拽 ==========
+
+    _supportedExtensions: ['.txt', '.md', '.markdown', '.js', '.json', '.html', '.css', '.xml', '.yml', '.yaml', '.csv', '.log', '.ini', '.cfg', '.conf', '.env', '.sh', '.bat', '.py', '.ts', '.jsx', '.tsx', '.vue', '.svelte', '.sql', '.gitignore', '.dockerfile'],
+
+    _bindFileDrop: function() {
+        var self = this;
+        this._fd_onDragOver = function(e) { e.preventDefault(); e.stopPropagation(); };
+        this._fd_onDrop = function(e) { e.preventDefault(); e.stopPropagation(); self._handleFileDrop(e); };
+        document.addEventListener('dragover', this._fd_onDragOver);
+        document.addEventListener('drop', this._fd_onDrop);
+    },
+
+    _unbindFileDrop: function() {
+        if (this._fd_onDragOver) document.removeEventListener('dragover', this._fd_onDragOver);
+        if (this._fd_onDrop) document.removeEventListener('drop', this._fd_onDrop);
+    },
+
+    _handleFileDrop: function(e) {
+        var files = e.dataTransfer.files;
+        if (!files || !files.length) return;
+        // 只处理拖拽到画布区域（世界层）
+        if (!this._layer || !this._layer.parentElement) return;
+        var rect = this._layer.parentElement.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (this._isTextFile(file)) {
+                this._readFileToNode(file, e.clientX, e.clientY);
+            }
+        }
+    },
+
+    _isTextFile: function(file) {
+        var name = file.name.toLowerCase();
+        for (var i = 0; i < this._supportedExtensions.length; i++) {
+            if (name.endsWith(this._supportedExtensions[i])) return true;
+        }
+        return false;
+    },
+
+    _readFileToNode: function(file, clientX, clientY) {
+        var self = this;
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            var content = event.target.result;
+            var ws = self._world.screenToWorld(clientX, clientY);
+            self._addNode(ws.x - self._defaultW / 2, ws.y - self._defaultH / 2, file.name, content);
+            self._minimapDirty = true;
+        };
+        reader.readAsText(file, 'utf-8');
     },
 
     // ========== 子工具栏 ==========
@@ -526,11 +580,17 @@ var NodeEditorSkill = {
             // 已在 mousedown 中处理右键
         };
 
-        // 视图变换时更新
+        // 视图变换时更新（节流，避免拖拽画布卡顿）
+        var _tfThrottled = false;
         this._handlers.transform = function() {
-            self._drawConns();
-            self._updateMinimap();
-            self._updateVisibleNodes();
+            if (_tfThrottled) return;
+            _tfThrottled = true;
+            requestAnimationFrame(function() {
+                _tfThrottled = false;
+                self._drawConns();
+                self._updateMinimap();
+                self._updateVisibleNodes();
+            });
         };
 
         // Escape 取消选中
@@ -716,6 +776,11 @@ var NodeEditorSkill = {
             // 滚动事件：同步行号滚动位置
             ta.addEventListener('scroll', function() {
                 ln.scrollTop = ta.scrollTop;
+            });
+
+            // 滚轮事件：阻止冒泡到画布缩放，允许 textarea 原生滚动
+            ta.addEventListener('wheel', function(e) {
+                e.stopPropagation();
             });
 
             // Tab 键插入缩进
