@@ -14,7 +14,7 @@
 7. 视频抽帧  (2026-05-21) 
 
 
-修复:所有js已下载本地
+所有js在根目录,无需联网
 
 
 ![图片](https://github.com/hello432369/huajing/blob/main/ScreenShot_2026-04-28_002125_487.png?raw=true)
