@@ -18,7 +18,7 @@ var CalculatorSkill = {
     // ===== 基本信息 =====
     id: 'calculator',
     name: '计算器',
-    icon: '算',
+    icon: '<span style="color:#38bdf8;">算</span>',
     category: '工具',
     description: '科学计算器，支持变量和表达式解析',
     key: '7',

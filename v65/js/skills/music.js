@@ -20,7 +20,7 @@ var MusicSkill = {
     // ===== 基本信息 =====
     id: 'music',
     name: '音乐播放',
-    icon: '音',
+    icon: '<span style="color:#38bdf8;">音</span>',
     description: '拖放音频文件，列表播放+多种模式',
     key: '3',
 

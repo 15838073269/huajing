@@ -20,7 +20,7 @@ var VideoSkill = {
     // ===== 基本信息 =====
     id: 'video',
     name: '视频播放',
-    icon: '影',
+    icon: '<span style="color:#38bdf8;">影</span>',
     description: '拖放视频文件，支持多视频播放',
     key: '4',
 

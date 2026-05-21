@@ -15,7 +15,7 @@ var NavBookmarksSkill = {
 
     id: 'nav-bookmarks',
     name: '导航',
-    icon: '航',
+    icon: '<span style="color:#38bdf8;">航</span>',
     description: '导航网址收藏，标签分类',
     key: 'n',
 

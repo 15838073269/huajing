@@ -2,7 +2,7 @@
  * 音频清理插件 - 单文件降噪+剪辑+导出
  */
 var AudioCleaner = {
-    id: 'audio-cleaner', name: '音频清理', icon: '净', category: '音频',
+    id: 'audio-cleaner', name: '音频清理', icon: '<span style="color:#38bdf8;">净</span>', category: '音频',
     _world: null, _overlay: null, _srcBuf: null, _onDocMove: null, _onDocUp: null,
 
     activate: function(world) {

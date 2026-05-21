@@ -41,6 +41,9 @@ var PLUGIN_LIST = [
 
     // === 叠图 ===
     'js/skills/tile-replace.js',  // 🧩 叠图替换 - Marching Squares 自动瓦片
+
+    // === AI ===
+    'js/skills/ai-image-gen.js',  // 🎨 AI生图 - AI图片生成
 ];
 
 /**
@@ -65,5 +68,6 @@ var PLUGIN_NUMBERS = {
     'spine-animate': 15,
     'audio-cleaner': 16,
     'nine-slice': 17,
-    'tile-replace': 18
+    'tile-replace': 18,
+    'ai-image-gen': 19
 };

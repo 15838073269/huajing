@@ -13,7 +13,7 @@ var PromptTemplateSkill = {
 
     id: 'prompt-template',
     name: '提示词',
-    icon: '词',
+    icon: '<span style="color:#4ecca3;">词</span>',
     description: 'AI绘画提示词模板，标签管理',
     key: 'p',
 
@@ -171,7 +171,6 @@ var PromptTemplateSkill = {
                 '<div class="pt-mgr-header-btns">' +
                     '<button class="pt-hdr-btn" id="ptImport" title="导入">导入</button>' +
                     '<button class="pt-hdr-btn" id="ptExport" title="导出">导出</button>' +
-                    '<button class="pt-hdr-btn pt-hdr-danger" id="ptClear" title="清空全部">清空</button>' +
                     '<button class="pt-mgr-close" id="ptMgrClose">&times;</button>' +
                 '</div>' +
             '</div>' +
@@ -192,6 +191,9 @@ var PromptTemplateSkill = {
                 '</div>' +
             '</div>' +
             '<div class="pt-resize-handle" id="ptResizeHandle"></div>' +
+            '<div class="pt-mgr-footer">' +
+                '<button class="pt-footer-btn pt-footer-danger" id="ptClear" title="清空全部模板，不可恢复">清空全部</button>' +
+            '</div>' +
             '<input type="file" id="ptFileInput" accept=".json,.txt" style="display:none">';
 
         document.body.appendChild(panel);
@@ -537,6 +539,7 @@ var PromptTemplateSkill = {
             // 右侧：操作按钮
             html += '<div class="pt-item-actions">' +
                 '<button class="pt-copy-btn" data-idx="' + realIdx + '">复制</button>' +
+                '<button class="pt-send-btn" data-idx="' + realIdx + '" title="发送到AI生图">→生</button>' +
                 '<button class="pt-del-btn" data-idx="' + realIdx + '">关</button>' +
             '</div>';
             html += '</div>';
@@ -557,6 +560,14 @@ var PromptTemplateSkill = {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 self._copyTemplate(parseInt(this.dataset.idx), this);
+            });
+        });
+
+        // 发送到 AI 生图
+        list.querySelectorAll('.pt-send-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                self._sendToImageGen(parseInt(this.dataset.idx));
             });
         });
 
@@ -662,6 +673,43 @@ var PromptTemplateSkill = {
         }
     },
 
+    _sendToImageGen: function(idx) {
+        var text = this._templates[idx].text;
+        var slots = this._parseSlots(text);
+        var result = text;
+
+        if (slots.length) {
+            var list = this._managerEl.querySelector('#ptList');
+            var item = list.querySelector('.pt-item[data-idx="' + idx + '"]');
+            if (item) {
+                item.querySelectorAll('.pt-slot').forEach(function(input) {
+                    var si = parseInt(input.dataset.si);
+                    var val = input.value.trim() || input.placeholder;
+                    result = result.replace(slots[si].full, val);
+                });
+            }
+        }
+
+        // 调用 AI 生图插件的公开方法
+        if (typeof AIImageGenSkill !== 'undefined' && AIImageGenSkill.insertPrompt) {
+            AIImageGenSkill.insertPrompt(result);
+            this._showToast('已发送到 AI 生图');
+        } else {
+            this._showToast('未找到 AI 生图插件');
+        }
+    },
+
+    // 公开方法：供其他插件直接添加模板
+    addTemplate: function(text, tags) {
+        if (!text || !text.trim()) return;
+        this._templates.unshift({ text: text.trim(), tags: tags || [] });
+        this._saveData();
+        if (this._managerEl && this._managerEl.style.display !== 'none') {
+            if (this._renderList) this._renderList();
+            if (this._renderSidebar) this._renderSidebar();
+        }
+    },
+
     _escapeHtml: function(str) {
         var div = document.createElement('div');
         div.textContent = str;
@@ -690,8 +738,8 @@ var PromptTemplateSkill = {
             'display:flex;flex-direction:column;user-select:none; }' +
         '.pt-mgr-header { display:flex;justify-content:space-between;align-items:center;' +
             'padding:8px 14px;background:rgba(56,189,248,.1);border-bottom:1px solid rgba(100,160,255,.15);' +
-            'cursor:move;font-size:13px;font-weight:600;color:#e2e8f0;flex-shrink:0; }' +
-        '.pt-mgr-header-btns { display:flex;align-items:center;gap:4px; }' +
+            'cursor:move;font-size:13px;font-weight:600;color:#e2e8f0;flex-shrink:0;gap:12px; }' +
+        '.pt-mgr-header-btns { display:flex;align-items:center;gap:4px;flex:0 0 auto; }' +
         '.pt-hdr-btn { padding:2px 8px;background:rgba(56,189,248,.06);border:1px solid rgba(100,160,255,.08);' +
             'color:#94a3b8;border-radius:6px;cursor:pointer;font-size:10px;transition:all .15s; }' +
         '.pt-hdr-btn:hover { background:rgba(56,189,248,.12);color:#e2e8f0; }' +
@@ -701,6 +749,13 @@ var PromptTemplateSkill = {
         '.pt-mgr-close { background:none;border:none;color:#64748b;font-size:16px;cursor:pointer;padding:0 2px;' +
             'line-height:1;transition:color .15s; }' +
         '.pt-mgr-close:hover { color:#38bdf8; }' +
+        '.pt-mgr-footer { display:flex;justify-content:flex-end;padding:4px 10px;' +
+            'background:rgba(0,0,0,.1);border-top:1px solid rgba(100,160,255,.06);flex-shrink:0; }' +
+        '.pt-footer-btn { padding:3px 10px;border:1px solid rgba(100,160,255,.08);border-radius:6px;' +
+            'cursor:pointer;font-size:10px;background:transparent;color:#64748b;transition:all .15s; }' +
+        '.pt-footer-btn:hover { background:rgba(255,255,255,.04);color:#94a3b8; }' +
+        '.pt-footer-danger { color:#5c4a4a; }' +
+        '.pt-footer-danger:hover { color:#f87171;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.15); }' +
 
         /* 主体 */
         '.pt-mgr-body { flex:1;display:flex;overflow:hidden;min-height:0; }' +
@@ -757,6 +812,10 @@ var PromptTemplateSkill = {
             'color:#38bdf8;border-radius:5px;cursor:pointer;font-size:9px;transition:all .15s;white-space:nowrap; }' +
         '.pt-copy-btn:hover { background:rgba(56,189,248,.2); }' +
         '.pt-copy-btn:active { transform:scale(0.92); }' +
+        '.pt-send-btn { padding:2px 8px;background:rgba(78,204,163,.1);border:1px solid rgba(78,204,163,.2);' +
+            'color:#4ecca3;border-radius:5px;cursor:pointer;font-size:9px;transition:all .15s;white-space:nowrap; }' +
+        '.pt-send-btn:hover { background:rgba(78,204,163,.2); }' +
+        '.pt-send-btn:active { transform:scale(0.92); }' +
         '.pt-del-btn { padding:2px 8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);' +
             'color:#f87171;border-radius:5px;cursor:pointer;font-size:9px;transition:all .15s;white-space:nowrap; }' +
         '.pt-del-btn:hover { background:rgba(239,68,68,.18); }' +

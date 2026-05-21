@@ -9,7 +9,7 @@
 var ReaderSkill = {
     id: 'reader',
     name: '文本阅读器',
-    icon: '读',
+    icon: '<span style="color:#38bdf8;">读</span>',
     category: '工具',
     description: '支持格式: txt md json js html css xml yml yaml csv log ini cfg conf env sh bat py ts jsx tsx vue svelte sql gitignore dockerfile',
     key: '3',

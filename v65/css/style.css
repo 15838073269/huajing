@@ -333,6 +333,15 @@ html, body {
     margin: 0 3px;
 }
 
+.cos-hotbar-group {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.02);
+    border-radius: 8px;
+    padding: 0 2px;
+    margin: 0 1px;
+}
+
 /* 当前技能名称 */
 .cos-skill-name {
     font-size: 11px;

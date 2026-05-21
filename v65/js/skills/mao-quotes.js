@@ -11,7 +11,7 @@ var MaoQuotesSkill = {
 
     id: 'mao-quotes',
     name: '信仰语录',
-    icon: '语',
+    icon: '<span style="color:#38bdf8;">语</span>',
     description: '顶部公告栏，每60秒随机展示一条语录',
     key: 'm',
 

@@ -15,7 +15,7 @@ var FolderBrowserSkill = {
     // ===== 基本信息 =====
     id: 'folder-browser',
     name: '文件夹浏览',
-    icon: '图',
+    icon: '<span style="color:#38bdf8;">图</span>',
     description: '拖放文件夹，网格预览浏览',
     key: '3',
 
@@ -943,6 +943,8 @@ var FolderBrowserSkill = {
     _clearCanvasImages: function() {
         var layer = this._world && this._world.getLayer();
         if (!layer) return;
+        if (!layer.querySelectorAll('.fb-canvas-image').length) return;
+        if (!confirm('确定清空画布上的所有图片？此操作不可撤销。')) return;
         var imgs = layer.querySelectorAll('.fb-canvas-image');
         for (var i = 0; i < imgs.length; i++) {
             if (imgs[i].parentNode) imgs[i].parentNode.removeChild(imgs[i]);

@@ -8,7 +8,7 @@
 var NodeEditorSkill = {
     id: 'node-editor',
     name: '节点编辑',
-    icon: '写',
+    icon: '<span style="color:#38bdf8;">写</span>',
     description: '分镜式节点编辑器',
 
     // === 内部状态 ===

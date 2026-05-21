@@ -17,7 +17,7 @@ var DrawingSkill = {
     // ===== 基本信息 =====
     id: 'drawing',
     name: '画板',
-    icon: '绘',
+    icon: '<span style="color:#38bdf8;">绘</span>',
     description: 'SVG画笔+橡皮擦自由绘制',
     key: '2',
 
@@ -368,6 +368,7 @@ var DrawingSkill = {
      */
     _clearDrawing: function() {
         if (this._paths.length === 0) return;
+        if (!confirm('确定清空所有绘画？此操作不可撤销。')) return;
 
         // 清空路径数组
         this._paths = [];

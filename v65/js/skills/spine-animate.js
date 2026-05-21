@@ -3314,7 +3314,7 @@ var SpineAnimate = (function() {
     }
 
     return {
-        id: 'spine-animate', name: '骨骼动画', icon: '🦴',
+        id: 'spine-animate', name: '骨骼动画', icon: '<span style="color:#38bdf8;">🦴</span>',
         description: '完整骨骼动画 · FK/IK · 约束 · 缓动 · 弹性 · 路径 · FFD · 裁剪 · Godot导出 (WebGL2)',
         _world: null, _layer: null,
         activate: function(world) { this._world = world; this._layer = world.getLayer(); open(); },

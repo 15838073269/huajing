@@ -375,82 +375,92 @@ var SkillSystem = (function() {
         // 移除已卸载的
         skillOrder = skillOrder.filter(function(id) { return skills[id]; });
 
-        // 保留分隔符和技能名称
+        // 按颜色分组
         inner.innerHTML = '';
-        skillOrder.forEach(function(id, i) {
-            var skill = skills[id];
-            if (!skill) return;
-            var el = document.createElement('div');
-            el.className = 'cos-skill' + (activeSkill === id ? ' cos-skill-active' : '');
-            el.draggable = true;
-            el.dataset.skillId = id;
-            var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[id]) ? PLUGIN_NUMBERS[id] : '';
-            el.innerHTML = '<span class="cos-skill-icon">' + skill.icon + '</span><span class="cos-skill-label">' + skill.name + '</span>' +
-                (num ? '<span class="cos-skill-num">' + num + '</span>' : '');
-            el.addEventListener('click', function() {
-                if (activeSkill === id) deactivate();
-                else activate(id);
-            });
-            // 悬浮提示
-            el.addEventListener('mouseenter', function() {
-                tip.innerHTML = '<b>' + skill.name + '</b>' +
-                    (skill.description ? '<br>' + skill.description : '');
-                tip.classList.add('visible');
-            });
-            el.addEventListener('mousemove', function(e) {
-                var rect = el.getBoundingClientRect();
-                tip.style.left = (rect.left + rect.width / 2) + 'px';
-                tip.style.top = (rect.top - 8) + 'px';
-                tip.style.transform = 'translate(-50%, -100%)';
-            });
-            el.addEventListener('mouseleave', function() {
-                tip.classList.remove('visible');
-            });
-            // 拖拽排序
-            el.addEventListener('dragstart', function(e) {
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', id);
-                el.classList.add('cos-skill-dragging');
-            });
-            el.addEventListener('dragend', function() {
-                el.classList.remove('cos-skill-dragging');
-                inner.querySelectorAll('.cos-skill').forEach(function(s) { s.classList.remove('cos-skill-drag-over'); });
-            });
-            el.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                el.classList.add('cos-skill-drag-over');
-            });
-            el.addEventListener('dragleave', function() {
-                el.classList.remove('cos-skill-drag-over');
-            });
-            el.addEventListener('drop', function(e) {
-                e.preventDefault();
-                el.classList.remove('cos-skill-drag-over');
-                var dragId = e.dataTransfer.getData('text/plain');
-                if (!dragId || dragId === id) return;
-                var fromIdx = skillOrder.indexOf(dragId);
-                var toIdx = skillOrder.indexOf(id);
-                if (fromIdx === -1 || toIdx === -1) return;
-                skillOrder.splice(fromIdx, 1);
-                skillOrder.splice(toIdx, 0, dragId);
-                renderHotbar();
-            });
-            inner.appendChild(el);
+        var groups = {};
+        skillOrder.forEach(function(id) {
+            if (!skills[id]) return;
+            var m = skills[id].icon && skills[id].icon.match(/color:#([a-f0-9]+)/i);
+            var color = m ? m[1] : 'default';
+            if (!groups[color]) groups[color] = [];
+            groups[color].push(id);
+        });
 
-            // 按颜色分组加分隔符（检测 icon 中的 color 值）
-            if (i > 0) {
-                var prevColor = 'default';
-                var m1 = skills[skillOrder[i-1]].icon.match(/color:#([a-f0-9]+)/i);
-                if (m1) prevColor = m1[1];
-                var curColor = 'default';
-                var m2 = skill.icon.match(/color:#([a-f0-9]+)/i);
-                if (m2) curColor = m2[1];
-                if (prevColor !== curColor) {
-                    var sep = document.createElement('div');
-                    sep.className = 'cos-hotbar-sep';
-                    inner.appendChild(sep);
-                }
+        var colorKeys = Object.keys(groups);
+        colorKeys.forEach(function(color, gi) {
+            // 创建颜色组容器
+            var groupEl = document.createElement('div');
+            groupEl.className = 'cos-hotbar-group';
+
+            groups[color].forEach(function(id) {
+                var skill = skills[id];
+                if (!skill) return;
+                var el = document.createElement('div');
+                el.className = 'cos-skill' + (activeSkill === id ? ' cos-skill-active' : '');
+                el.draggable = true;
+                el.dataset.skillId = id;
+                var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[id]) ? PLUGIN_NUMBERS[id] : '';
+                el.innerHTML = '<span class="cos-skill-icon">' + skill.icon + '</span><span class="cos-skill-label">' + skill.name + '</span>' +
+                    (num ? '<span class="cos-skill-num">' + num + '</span>' : '');
+                el.addEventListener('click', function() {
+                    if (activeSkill === id) deactivate();
+                    else activate(id);
+                });
+                // 悬浮提示
+                el.addEventListener('mouseenter', function() {
+                    tip.innerHTML = '<b>' + skill.name + '</b>' +
+                        (skill.description ? '<br>' + skill.description : '');
+                    tip.classList.add('visible');
+                });
+                el.addEventListener('mousemove', function(e) {
+                    var rect = el.getBoundingClientRect();
+                    tip.style.left = (rect.left + rect.width / 2) + 'px';
+                    tip.style.top = (rect.top - 8) + 'px';
+                    tip.style.transform = 'translate(-50%, -100%)';
+                });
+                el.addEventListener('mouseleave', function() {
+                    tip.classList.remove('visible');
+                });
+                // 拖拽排序（组内）
+                el.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', id);
+                    el.classList.add('cos-skill-dragging');
+                });
+                el.addEventListener('dragend', function() {
+                    el.classList.remove('cos-skill-dragging');
+                    inner.querySelectorAll('.cos-skill').forEach(function(s) { s.classList.remove('cos-skill-drag-over'); });
+                });
+                el.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    el.classList.add('cos-skill-drag-over');
+                });
+                el.addEventListener('dragleave', function() {
+                    el.classList.remove('cos-skill-drag-over');
+                });
+                el.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    el.classList.remove('cos-skill-drag-over');
+                    var dragId = e.dataTransfer.getData('text/plain');
+                    if (!dragId || dragId === id) return;
+                    var fromIdx = skillOrder.indexOf(dragId);
+                    var toIdx = skillOrder.indexOf(id);
+                    if (fromIdx === -1 || toIdx === -1) return;
+                    skillOrder.splice(fromIdx, 1);
+                    skillOrder.splice(toIdx, 0, dragId);
+                    renderHotbar();
+                });
+                groupEl.appendChild(el);
+            });
+
+            inner.appendChild(groupEl);
+
+            // 颜色组之间加分隔线
+            if (gi < colorKeys.length - 1) {
+                var sep = document.createElement('div');
+                sep.className = 'cos-hotbar-sep';
+                inner.appendChild(sep);
             }
         });
 
