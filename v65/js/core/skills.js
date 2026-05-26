@@ -26,7 +26,7 @@ var SkillSystem = (function() {
                 win.style.zIndex = topZ;
                 var skillId = win.getAttribute('data-skill-id');
                 if (skillId && skillId !== activeSkill && skills[skillId]) {
-                    if (activeSkill === 'drawing') return;
+                    if (activeSkill === 'drawing' || activeSkill === 'ui-debugger') return;
                     activate(skillId);
                 }
             }

@@ -675,6 +675,9 @@ var TileToolSkill = {
                     '<button class="tt-btn tt-cloud-split-export" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(56,189,248,0.2);background:rgba(56,189,248,0.08);color:#38bdf8;cursor:pointer;margin-left:4px;">盘导出</button>' +
                     '<button class="tt-btn tt-btn-primary" data-action="pushToMerge" id="ttPushMergeBtn" disabled>推送合并</button>' +
                 '</div>' +
+                '<div class="tt-btn-group" style="margin-top:6px">' +
+                    '<button class="tt-btn tt-btn-primary" data-action="exportGodotScene" id="ttGodotBtn" disabled>🎮 导出 Godot 场景</button>' +
+                '</div>' +
             '</div>' +
         '</div>' +
         '<!-- MERGE PANEL -->' +
@@ -1036,6 +1039,7 @@ var TileToolSkill = {
                     overlay.querySelector('#ttMergeFiles').click();
                     break;
                 case 'mergeAndDownload': self._mergeAndDownload(); break;
+                case 'exportGodotScene': self._exportGodotScene(); break;
                 case 'lassoMode':
                     var mode = btn.getAttribute('data-lasso');
                     if (self.state.lassoMode === mode) {
@@ -1298,6 +1302,7 @@ var TileToolSkill = {
             self._q('#ttSplitEmpty').style.display = 'none';
             self._q('#ttCanvasWrapper').style.display = 'inline-block';
             self._q('#ttSplitBtn').disabled = false;
+            self._q('#ttGodotBtn').disabled = false;
         };
         img.src = dataURL;
     },
@@ -1332,6 +1337,7 @@ var TileToolSkill = {
                 self._q('#ttInfoSize').textContent = img.width + ' \u00d7 ' + img.height;
                 self._q('#ttSplitBtn').disabled = false;
                 self._q('#ttPushMergeBtn').disabled = false;
+                self._q('#ttGodotBtn').disabled = false;
                 self._q('#ttSplitFile').value = '';
                 self._showToast('图片加载成功 (' + img.width + '\u00d7' + img.height + ')');
             };
@@ -3171,5 +3177,163 @@ var TileToolSkill = {
             CosCloudDrive.add('合拼图 ' + new Date().toLocaleTimeString(), '素材拆分合并', dataUrl);
         }
         this._showToast(cloudOnly ? '已存入云盘' : '合并完成! (' + canvasW + '\u00d7' + canvasH + ')');
+    },
+
+    // ========================================
+    //   Godot 场景导出（转换器，不影响现有功能）
+    // ========================================
+
+    _exportGodotScene: function() {
+        var self = this;
+        var img = this.state.originalImage;
+        if (!img) { this._showToast('请先加载图片', true); return; }
+
+        var regions, isGrid = this.state.splitMode === 'grid';
+
+        if (isGrid) {
+            if (!this._gridRegions || this._gridRegions.length === 0) {
+                this._showToast('请先执行方形分割', true); return;
+            }
+            regions = this._gridRegions.map(function(r) {
+                return { x: r.ox, y: r.oy, w: r.ow, h: r.oh, name: 'grid_r' + r.row + '_c' + r.col, pixels: null };
+            });
+        } else {
+            if (this.state.regions.length === 0) {
+                this._showToast('请先检测区域', true); return;
+            }
+            regions = this.state.regions.map(function(r, i) {
+                return {
+                    x: r.bounds.x, y: r.bounds.y,
+                    w: r.bounds.w, h: r.bounds.h,
+                    name: 'region_' + String(i + 1).padStart(3, '0'),
+                    pixels: r.pixels,
+                    pixelSet: r.pixelSet
+                };
+            });
+        }
+
+        var sceneName = prompt('场景名称（可含路径，如 ui/main）：', 'game_ui_scene');
+        if (!sceneName) return;
+        sceneName = sceneName.trim();
+        if (!sceneName) return;
+
+        // 分离路径前缀和场景名
+        var resPrefix = '', baseName = sceneName;
+        var slashIdx = sceneName.lastIndexOf('/');
+        if (slashIdx >= 0) {
+            resPrefix = sceneName.substring(0, slashIdx + 1);
+            baseName = sceneName.substring(slashIdx + 1);
+        }
+
+        this._showToast('正在生成 Godot 场景...');
+        setTimeout(function() { self._doExportGodot(img, regions, baseName, resPrefix); }, 50);
+    },
+
+    _doExportGodot: function(img, regions, sceneName, resPrefix) {
+        var self = this;
+        resPrefix = resPrefix || '';
+        var folderPrefix = resPrefix || (sceneName + '/');
+        var format = this._getVal('#splitFormat') || 'png';
+        var ext = format === 'webp' ? '.webp' : '.png';
+        var mimeType = format === 'webp' ? 'image/webp' : 'image/png';
+        var trim = this._q('#trimTransparent') && this._q('#trimTransparent').checked;
+
+        // Source canvas
+        var srcCanvas = document.createElement('canvas');
+        srcCanvas.width = img.width;
+        srcCanvas.height = img.height;
+        var srcCtx = srcCanvas.getContext('2d');
+        if (this.state.processedImageData) {
+            srcCtx.putImageData(this.state.processedImageData, 0, 0);
+        } else {
+            srcCtx.drawImage(img, 0, 0);
+        }
+        var srcData = srcCtx.getImageData(0, 0, img.width, img.height);
+
+        var resourceLines = [];
+        var nodeLines = [];
+
+        nodeLines.push('');
+        nodeLines.push('[node name="' + sceneName + '" type="Control"]');
+        nodeLines.push('layout_mode = 0');
+        nodeLines.push('anchors_preset = 0');
+        nodeLines.push('size = Vector2(' + img.width + ', ' + img.height + ')');
+        nodeLines.push('mouse_filter = 2');
+
+        var totalExported = 0;
+
+        regions.forEach(function(r, i) {
+            var tileCanvas = document.createElement('canvas');
+            tileCanvas.width = r.w;
+            tileCanvas.height = r.h;
+            var tileCtx = tileCanvas.getContext('2d');
+
+            if (r.pixels) {
+                var tileData = tileCtx.createImageData(r.w, r.h);
+                var td = tileData.data;
+                var sd = srcData.data;
+                r.pixels.forEach(function(p) {
+                    var sx = (p[1] * img.width + p[0]) * 4;
+                    var dx = ((p[1] - r.y) * r.w + (p[0] - r.x)) * 4;
+                    td[dx] = sd[sx];
+                    td[dx + 1] = sd[sx + 1];
+                    td[dx + 2] = sd[sx + 2];
+                    td[dx + 3] = sd[sx + 3];
+                });
+                tileCtx.putImageData(tileData, 0, 0);
+            } else {
+                tileCtx.drawImage(srcCanvas, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+            }
+
+            if (trim) tileCanvas = self._trimCanvas(tileCanvas);
+
+            var dataUrl = tileCanvas.toDataURL(mimeType, 0.95);
+            var base64 = dataUrl.split(',')[1];
+            var filename = r.name + ext;
+            var resPath = folderPrefix + filename;
+            var resId = i + 1;
+
+            resourceLines.push('[ext_resource type="Texture2D" path="res://' + resPath + '" id="' + resId + '"]');
+
+            nodeLines.push('');
+            nodeLines.push('[node name="' + r.name + '" type="TextureRect" parent="."]');
+            nodeLines.push('layout_mode = 0');
+            nodeLines.push('position = Vector2(' + Math.round(r.x) + ', ' + Math.round(r.y) + ')');
+            nodeLines.push('size = Vector2(' + tileCanvas.width + ', ' + tileCanvas.height + ')');
+            nodeLines.push('texture = ExtResource("' + resId + '")');
+            nodeLines.push('expand_mode = 0');
+            nodeLines.push('stretch_mode = 0');
+            nodeLines.push('mouse_filter = 1');
+
+            r._base64 = base64;
+            r._filename = resPath;
+            totalExported++;
+        });
+
+        var tscn = '[gd_scene load_steps=' + (resourceLines.length + 1) + ' format=3]\n';
+        if (resourceLines.length > 0) tscn += '\n' + resourceLines.join('\n');
+        tscn += '\n' + nodeLines.join('\n') + '\n';
+
+        if (typeof JSZip === 'undefined') {
+            this._showToast('JSZip 库未加载，无法创建 ZIP', true);
+            return;
+        }
+
+        var zip = new JSZip();
+        zip.file(folderPrefix + sceneName + '.tscn', tscn);
+        regions.forEach(function(r) {
+            zip.file(r._filename, r._base64, { base64: true });
+        });
+
+        zip.generateAsync({ type: 'blob' }).then(function(blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = sceneName + '_godot.zip';
+            a.click();
+            URL.revokeObjectURL(url);
+            self._showToast('已导出 ' + totalExported + ' 个 TextureRect 节点的 Godot 场景');
+        });
     }
+
 };

@@ -461,3 +461,64 @@ v65/
 2. 修改 id、name、icon、实现功能
 3. 在 `js/plugins.js` 的 `PLUGIN_LIST` 中添加 `'js/skills/my-plugin.js'`
 4. 刷新页面，在"包裹"中安装
+
+---
+
+## 十五、多语言 / TEXTS 外部化约定
+
+所有用户可见的文本（按钮、标签、提示、消息）必须集中定义在插件对象的 `TEXTS` 属性中，不允许硬编码在 HTML 或逻辑代码里。
+
+### 结构
+
+```javascript
+var MyPlugin = {
+    id: 'my-plugin',
+    name: '我的插件',
+    icon: '插',
+
+    TEXTS: {
+        TITLE: '我的插件',
+        BTN_SUBMIT: '提交',
+        BTN_CANCEL: '取消',
+        MSG_LOADING: '加载中...',
+        MSG_ERROR: '出错了: {0}',  // {0} {1} 为运行时替换占位符
+    },
+
+    activate: function(world) {
+        // ...
+    }
+};
+```
+
+### 使用方式
+
+直接通过 `this.TEXTS.KEY` 引用：
+
+```javascript
+_createOverlay: function() {
+    ov.innerHTML =
+        '<div class="my-header">' +
+            '<span>' + this.TEXTS.TITLE + '</span>' +
+            '<span>' + this.TEXTS.BTN_SUBMIT + '</span>' +
+        '</div>' +
+        '<div class="my-body"></div>';
+}
+```
+
+带参数的文本使用自制的 `_fmt` 方法：
+
+```javascript
+_fmt: function(str, a, b) {
+    return str.replace('{0}', a).replace('{1}', b);
+},
+// 用法：this._fmt(this.TEXTS.MSG_ERROR, errMsg)
+```
+
+### 规则
+
+1. **TEXTS 只包含用户可见文本** — 不包含 CSS 类名、HTML 结构、配置常量
+2. **TEXTS 键名全大写 + 下划线**，按语义分组加前缀（`BTN_`, `MSG_`, `LABEL_`, `TAB_`, `TOOLTIP_`）
+3. **内联拼接字符串**优先（`'<span>' + this.TEXTS.FOO + '</span>'`），不使用模板字符串以保持 ES5 兼容
+4. **新增文本**直接添加键值对，不修改已有键名
+5. **不允许**在 HTML 模板中硬写中文/英文文本（除极少数调试用临时文字）
+6. **百分比/符号等非文本字符**（如 `%`, `×`, 箭头符号）如果只是 UI 装饰而非语义文本，可以不进 TEXTS

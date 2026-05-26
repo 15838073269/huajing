@@ -935,3 +935,7 @@ html, body {
 .cos-hotbar-tip.visible {
     opacity: 1;
 }
+
+[data-skill-id="pixel-paint"] div.pp-header:nth-child(2) > h1:nth-child(1) {
+    color: #f83acf;
+}

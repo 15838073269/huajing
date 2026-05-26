@@ -39,6 +39,12 @@ var Mp42SpritesSkill = {
     _draggedOrder: null,
     _frameZoom: 1,
     _selectedZoom: 1,
+    _previewZoom: 1,
+    _previewSize: 300,
+    _refBoxState: null,
+    _frameDrag: null, // { edge: 'top'|'bottom'|'left'|'right'|'tl'|'tr'|'bl'|'br', frameIdx, startX, startY, startScaleX, startScaleY, frameW, frameH }
+    _renderPending: false,
+    _snapToEdge: true,
 
     // ===== 生命周期 =====
 
@@ -88,7 +94,7 @@ var Mp42SpritesSkill = {
         // 标题栏
         var header = document.createElement('div');
         header.className = 'ms-header';
-        header.innerHTML = '<h1>视频转序列图</h1><button class="ms-close-btn" id="msCloseBtn">关</button>';
+        header.innerHTML = '<h1>帧动画</h1><button class="ms-close-btn" id="msCloseBtn">关</button>';
         panel.appendChild(header);
 
         // 主体：2列2行 grid，左列播放器与右列内容对应行等高
@@ -115,18 +121,18 @@ var Mp42SpritesSkill = {
                 '<div class="ms-progress-bar"><div class="ms-progress-fill" id="msProgressFill">0%</div></div>' +
             '</div>' +
             '<div class="ms-upload-area">' +
-                '<input type="file" id="msVideoInput" accept="video/*" style="display:none;">' +
-                '<button class="ms-upload-btn" id="msUploadBtn">上传视频</button>' +
+                '<input type="file" id="msFileInput" accept="video/*,image/*" multiple style="display:none;">' +
+                '<button class="ms-upload-btn" id="msUploadBtn">上传视频/帧图</button>' +
+                '<button class="ms-upload-btn" id="msCloudImportBtn" style="background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.25);">☁ 盘导入</button>' +
             '</div>' +
-            '<div class="ms-frames-info" id="msFramesInfo">请上传视频文件</div>' +
-            '<div class="ms-frames-section" id="msFramesSection" style="display:none">' +
+            '<div class="ms-frames-info" id="msFramesInfo">支持视频抽帧和图片集，两种方式均可</div>' +
+            '<div class="ms-frames-section" id="msFramesSection">' +
                 '<div class="ms-section-header">' +
                     '<span class="ms-section-title">序列帧列表</span>' +
                     '<div class="ms-hdr-controls">' +
                         '<span class="ms-hdr-label">缩放</span>' +
                         '<input type="range" id="msFrameZoom" min="0.5" max="3" step="0.25" value="1" class="ms-hdr-slider">' +
                         '<span class="ms-hdr-val" id="msFrameZoomVal">1x</span>' +
-                        '<button class="ms-sm-btn ms-btn-primary" id="msSelectAllBtn">全选</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="ms-frames-grid" id="msFramesGrid"></div>' +
@@ -147,15 +153,18 @@ var Mp42SpritesSkill = {
                         '<span class="ms-hdr-label">缩放</span>' +
                         '<input type="range" id="msSelectedZoom" min="0.5" max="3" step="0.25" value="1" class="ms-hdr-slider">' +
                         '<span class="ms-hdr-val" id="msSelectedZoomVal">1x</span>' +
+                        '<button class="ms-sm-btn ms-btn-success" id="msCloudExportBtn" style="font-size:11px;padding:4px 8px;border:1px solid rgba(56,189,248,0.2);background:rgba(56,189,248,0.08);color:#38bdf8;" disabled>☁ 盘导出</button>' +
+                        '<button class="ms-sm-btn ms-btn-success" id="msDownloadBtn" disabled>下载</button>' +
                         '<button class="ms-sm-btn ms-btn-warning" id="msClearBtn" disabled>清空</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="ms-select-toolbar" id="msSelectToolbar">' +
+                    '<button class="ms-sm-btn ms-btn-primary" id="msSelAllBtn">全选</button>' +
                     '<button class="ms-sm-btn ms-btn-outline" id="msOddBtn">奇数</button>' +
                     '<button class="ms-sm-btn ms-btn-outline" id="msEvenBtn">偶数</button>' +
                     '<button class="ms-sm-btn ms-btn-outline" id="msHalfBtn">二分</button>' +
                     '<span class="ms-tb-label">循环</span>' +
-                    '<input type="number" class="ms-tb-input" id="msLoopInput" value="1" min="1">' +
+                    '<input type="number" class="ms-tb-input" id="msLoopInput" value="2" min="2">' +
                     '<button class="ms-sm-btn ms-btn-outline" id="msLoopBtn">提取</button>' +
                 '</div>' +
                 '<div class="ms-selected-container">' +
@@ -169,10 +178,20 @@ var Mp42SpritesSkill = {
         leftBottom.className = 'ms-grid-cell ms-left-bottom';
         leftBottom.innerHTML =
             '<div class="ms-cell-header">已选帧播放' +
-                '<button class="ms-sm-btn ms-btn-primary" id="msPlayProcBtn" disabled>播放</button>' +
+                '<div style="display:flex;gap:4px;align-items:center;">' +
+                    '<button class="ms-sm-btn ms-btn-primary" id="msPrevBtn" disabled>⏮</button>' +
+                    '<button class="ms-sm-btn ms-btn-primary" id="msPlayPauseBtn" disabled>▶</button>' +
+                    '<button class="ms-sm-btn ms-btn-primary" id="msNextBtn" disabled>⏭</button>' +
+                    '<label style="margin-left:8px;display:flex;align-items:center;gap:3px;font-size:11px;color:#94a3b8;cursor:pointer;">' +
+                        '<input type="checkbox" id="msSnapEdge" checked> 贴边' +
+                    '</label>' +
+                '</div>' +
             '</div>' +
-            '<div class="ms-cell-body">' +
+            '<div class="ms-cell-body" style="position:relative;">' +
                 '<canvas class="ms-play-canvas" id="msProcPreview"></canvas>' +
+                '<div id="msFrameIndicator" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);' +
+                    'background:rgba(0,0,0,0.7);color:#38bdf8;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700;' +
+                    'display:none;pointer-events:none;">帧 1 / 10</div>' +
             '</div>';
         body.appendChild(leftBottom);
 
@@ -230,10 +249,16 @@ var Mp42SpritesSkill = {
 
         // 上传
         ov.querySelector('#msUploadBtn').addEventListener('click', function() {
-            ov.querySelector('#msVideoInput').click();
+            ov.querySelector('#msFileInput').click();
         });
-        ov.querySelector('#msVideoInput').addEventListener('change', function(e) {
-            self._handleVideoUpload(e);
+        ov.querySelector('#msFileInput').addEventListener('change', function(e) {
+            var files = Array.from(e.target.files);
+            if (!files.length) return;
+            if (files[0].type.startsWith('video/')) {
+                self._handleVideoUpload(e);
+            } else {
+                self._handleImageUpload(e);
+            }
         });
 
         // 帧缩放
@@ -252,26 +277,138 @@ var Mp42SpritesSkill = {
             self._renderSelectedFrames();
         });
 
-        // 全选
-        ov.querySelector('#msSelectAllBtn').addEventListener('click', function() {
-            self._toggleSelectAll();
-        });
-
         // 清空
         ov.querySelector('#msClearBtn').addEventListener('click', function() {
             self._clearSelection();
+        });
+        // 下载
+        ov.querySelector('#msDownloadBtn').addEventListener('click', function() {
+            self._downloadAlignedStrip();
+        });
+
+        // 盘导入
+        ov.querySelector('#msCloudImportBtn').addEventListener('click', function() {
+            if (typeof CosCloudDrive === 'undefined') return;
+            CosCloudDrive.setOnSelect(function(item) {
+                CosCloudDrive._overlay.style.display = 'none';
+                CosCloudDrive.setOnSelect(null);
+                self._loadImageFromURL(item.dataURL, item.name || '云盘图片');
+            });
+            CosCloudDrive.open();
+        });
+        // 盘导出
+        ov.querySelector('#msCloudExportBtn').addEventListener('click', function() {
+            if (typeof CosCloudDrive === 'undefined') return;
+            if (self._selectedFrames.length === 0) return;
+            self._doCloudExport();
         });
 
         // 原图帧播放 → 播放全部帧
         ov.querySelector('#msPlayOrigBtn').addEventListener('click', function() {
             self._playAllFrames();
         });
-        // 已选帧播放 → 播放已选帧
-        ov.querySelector('#msPlayProcBtn').addEventListener('click', function() {
-            self._playSelectedFrames();
+        // 已选帧播放控制
+        ov.querySelector('#msPrevBtn').addEventListener('click', function() {
+            self._stepFrame(-1);
+        });
+        ov.querySelector('#msPlayPauseBtn').addEventListener('click', function() {
+            self._togglePlayPause();
+        });
+        ov.querySelector('#msNextBtn').addEventListener('click', function() {
+            self._stepFrame(1);
+        });
+
+        // 贴边切换
+        ov.querySelector('#msSnapEdge').addEventListener('change', function() {
+            self._snapToEdge = this.checked;
+            self._renderCurrentFrame();
+            // 如果正在播放，重新渲染
+            if (self._procPreviewCanvas && self._procPreviewCanvas._playing) {
+                self._stopCanvas(self._procPreviewCanvas);
+                var selOrder = self._selectedFrames.slice();
+                self._startPlayback(self._procPreviewCanvas, self._procPreviewCtx, selOrder, false);
+            }
+        });
+
+        // 当前帧拖拽手柄
+        ov.querySelector('#msProcPreview').addEventListener('mousedown', function(e) {
+            var selLen = self._selectedFrames.length;
+            var canvas = self._procPreviewCanvas;
+            if (!selLen || !canvas || typeof canvas._currentFrameIdx !== 'number') return;
+            var idx = self._selectedFrames[canvas._currentFrameIdx];
+            if (idx === undefined) return;
+            var frame = self._frames[idx];
+            if (!frame) return;
+            var firstFrame = self._frames[self._selectedFrames[0]];
+            if (!firstFrame) return;
+
+            var rect = canvas.getBoundingClientRect();
+            var mx = (e.clientX - rect.left) / (self._previewZoom || 1);
+            var my = (e.clientY - rect.top) / (self._previewZoom || 1);
+
+            var cx = canvas.width / 2;
+            var cy = canvas.height / 2;
+            var sx = frame.scaleX || 1;
+            var sy = frame.scaleY || 1;
+            var fw = frame.width;
+            var fh = frame.height;
+            // 计算refScale使第一帧适配预览区
+            var maxRefW = canvas.width * 0.75;
+            var maxRefH = canvas.height * 0.75;
+            var refSc = Math.min(maxRefW / firstFrame.width, maxRefH / firstFrame.height, 1);
+
+            var drawX = cx - frame.anchorX * refSc;
+            var drawY = cy - frame.anchorY * refSc;
+            var drawW = fw * sx * refSc;
+            var drawH = fh * sy * refSc;
+
+            // 检测角（10px范围）
+            var corners = {
+                'tl': { x: drawX, y: drawY },
+                'tr': { x: drawX + drawW, y: drawY },
+                'bl': { x: drawX, y: drawY + drawH },
+                'br': { x: drawX + drawW, y: drawY + drawH }
+            };
+            var hitCorner = null;
+            for (var c in corners) {
+                if (Math.abs(mx - corners[c].x) < 10 && Math.abs(my - corners[c].y) < 10) {
+                    hitCorner = c; break;
+                }
+            }
+            // 检测边（8px范围）
+            var hitEdge = null;
+            if (!hitCorner) {
+                if (Math.abs(mx - drawX) < 6 && my > drawY && my < drawY + drawH) hitEdge = 'left';
+                else if (Math.abs(mx - (drawX + drawW)) < 6 && my > drawY && my < drawY + drawH) hitEdge = 'right';
+                else if (Math.abs(my - drawY) < 6 && mx > drawX && mx < drawX + drawW) hitEdge = 'top';
+                else if (Math.abs(my - (drawY + drawH)) < 6 && mx > drawX && mx < drawX + drawW) hitEdge = 'bottom';
+            }
+
+            if (hitCorner || hitEdge) {
+                self._frameDrag = {
+                    edge: hitCorner || hitEdge,
+                    frameIdx: idx,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    startScaleX: sx,
+                    startScaleY: sy,
+                    startDrawX: frame.drawOffsetX || 0,
+                    startDrawY: frame.drawOffsetY || 0,
+                    half: canvas.width / 2,
+                    fw: fw,
+                    fh: fh,
+                    refSc: refSc
+                };
+                e.preventDefault();
+                return;
+            }
+
         });
 
         // 快速提取
+        ov.querySelector('#msSelAllBtn').addEventListener('click', function() {
+            self._toggleSelectAll();
+        });
         ov.querySelector('#msOddBtn').addEventListener('click', function() {
             self._quickSelect('odd');
         });
@@ -306,6 +443,192 @@ var Mp42SpritesSkill = {
         document.addEventListener('mouseup', function() {
             hDown = false;
         });
+
+        // 当前帧拖拽缩放（全局鼠标移动）
+        document.addEventListener('mousemove', function(e) {
+            if (self._frameDrag) {
+                var drag = self._frameDrag;
+                var dx = (e.clientX - drag.startX) / (self._previewZoom || 1);
+                var dy = (e.clientY - drag.startY) / (self._previewZoom || 1);
+                var rs = drag.refSc || 1;
+                var newSX = drag.startScaleX;
+                var newSY = drag.startScaleY;
+                var frameData = self._frames[drag.frameIdx];
+
+                var edge = drag.edge;
+                // 根据拖拽的边/角计算 newSX / newSY（除以refSc以适配预览缩放）
+                if (edge === 'right' || edge === 'tr' || edge === 'br') {
+                    newSX = Math.max(0.05, (drag.fw * drag.startScaleX + dx / rs) / drag.fw);
+                }
+                if (edge === 'left' || edge === 'tl' || edge === 'bl') {
+                    newSX = Math.max(0.05, (drag.fw * drag.startScaleX - dx / rs) / drag.fw);
+                }
+                if (edge === 'bottom' || edge === 'bl' || edge === 'br') {
+                    newSY = Math.max(0.05, (drag.fh * drag.startScaleY + dy / rs) / drag.fh);
+                }
+                if (edge === 'top' || edge === 'tl' || edge === 'tr') {
+                    newSY = Math.max(0.05, (drag.fh * drag.startScaleY - dy / rs) / drag.fh);
+                }
+                // 四个角拖拽时如果带了shift则等比例
+                if (e.shiftKey && edge.match(/^[trbl]{2}$/)) {
+                    var avg = (newSX + newSY) / 2;
+                    newSX = avg;
+                    newSY = avg;
+                }
+
+                newSX = Math.max(0.05, Math.min(10, newSX));
+                newSY = Math.max(0.05, Math.min(10, newSY));
+
+                frameData.scaleX = newSX;
+                frameData.scaleY = newSY;
+
+                // 非对称拉伸补偿（所有值都乘refSc以匹配绘制坐标）
+                if (edge === 'left' || edge === 'tl' || edge === 'bl') {
+                    var baseX = (drag.half || 0) - (frameData.anchorX || drag.fw / 2) * rs;
+                    var targetRight = baseX + (drag.startDrawX || 0) * rs + drag.fw * drag.startScaleX * rs;
+                    frameData.drawOffsetX = (targetRight - drag.fw * newSX * rs - baseX) / rs;
+                } else {
+                    frameData.drawOffsetX = drag.startDrawX || 0;
+                }
+                if (edge === 'top' || edge === 'tl' || edge === 'tr') {
+                    var baseY = (drag.half || 0) - (frameData.anchorY || drag.fh / 2) * rs;
+                    var targetBottom = baseY + (drag.startDrawY || 0) * rs + drag.fh * drag.startScaleY * rs;
+                    frameData.drawOffsetY = (targetBottom - drag.fh * newSY * rs - baseY) / rs;
+                } else {
+                    frameData.drawOffsetY = drag.startDrawY || 0;
+                }
+
+                // 显示当前缩放值在编号标签旁
+                var canvas = self._procPreviewCanvas;
+                var indicator = self._overlay.querySelector('#msFrameIndicator');
+                if (indicator) {
+                    indicator.innerHTML = '帧 ' + (canvas._currentFrameIdx + 1) + ' / ' + self._selectedFrames.length;
+                }
+                if (!self._renderPending) {
+                    self._renderPending = true;
+                    requestAnimationFrame(function() {
+                        self._renderPending = false;
+                        self._renderCurrentFrame();
+                    });
+                }
+                e.preventDefault();
+                return;
+            }
+
+        });
+
+        document.addEventListener('mouseup', function(e) {
+            if (self._frameDrag) {
+                self._frameDrag = null;
+            }
+        });
+    },
+
+    // ===== 图片上传处理 =====
+
+    _handleImageUpload: function(e) {
+        var self = this;
+        var files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        // 按文件名自然排序
+        files.sort(function(a, b) {
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+        this._frames = [];
+        this._selectedFrames = [];
+        this._stopPreview();
+        if (this._origPreviewCtx) this._origPreviewCtx.clearRect(0, 0, this._origPreviewCanvas.width, this._origPreviewCanvas.height);
+        if (this._procPreviewCtx) this._procPreviewCtx.clearRect(0, 0, this._procPreviewCanvas.width, this._procPreviewCanvas.height);
+
+        var framesGrid = this._overlay.querySelector('#msFramesGrid');
+        var framesInfo = this._overlay.querySelector('#msFramesInfo');
+        var framesSection = this._overlay.querySelector('#msFramesSection');
+        framesGrid.innerHTML = '';
+        framesInfo.textContent = '正在加载图片...';
+
+        var loaded = 0;
+        var total = files.length;
+
+        files.forEach(function(file, idx) {
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    // 判断是否已有透明通道（已经抠过图）
+                    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    var hasAlpha = false;
+                    for (var pi = 3; pi < imageData.data.length; pi += 4) {
+                        if (imageData.data[pi] < 255) { hasAlpha = true; break; }
+                    }
+
+                    function _onFrameReady(readyCanvas) {
+                        var frameIndex = self._frames.length;
+                        self._frames.push({
+                            index: frameIndex,
+                            dataUrl: readyCanvas.toDataURL('image/png'),
+                            width: readyCanvas.width,
+                            height: readyCanvas.height,
+                            canvas: readyCanvas,
+                            name: file.name,
+                            anchorX: readyCanvas.width / 2,
+                            anchorY: readyCanvas.height / 2,
+                            scaleX: 1,
+                            scaleY: 1,
+                            drawOffsetX: 0,
+                            drawOffsetY: 0
+                        });
+
+                        // 添加到网格
+                        var frameItem = document.createElement('div');
+                        frameItem.className = 'ms-frame-item';
+                        frameItem.dataset.index = frameIndex;
+                        frameItem.innerHTML =
+                            '<img src="' + self._frames[frameIndex].dataUrl + '" draggable="false">' +
+                            '<div class="ms-frame-number">' + (frameIndex + 1) + '</div>' +
+                            '<div class="ms-frame-name" title="' + file.name + '">' + file.name + '</div>' +
+                            '<div class="ms-play-order"></div>' +
+                            '<div class="ms-frame-check">\u2713</div>';
+
+                        frameItem.addEventListener('click', (function(i) {
+                            return function() { self._toggleFrameSelection(i); };
+                        })(frameIndex));
+
+                        framesGrid.appendChild(frameItem);
+
+                        loaded++;
+                        framesInfo.textContent = '正在加载图片... ' + loaded + '/' + total;
+
+                        if (loaded === total) {
+                            framesInfo.textContent = '共 ' + self._frames.length + ' 帧，已选择 0 帧';
+                            framesSection.style.display = 'block';
+                            self._applyFrameItemSize(150);
+                            self._updateButtons();
+                        }
+                    }
+
+                    if (hasAlpha) {
+                        // 已有透明通道，直接使用原图
+                        setTimeout(function() { _onFrameReady(canvas); }, 0);
+                    } else {
+                        // 纯色背景，自动抠图
+                        self._removeBackground(canvas).then(function(c) { setTimeout(function() { _onFrameReady(c); }, 0); });
+                    }
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 重置 input 以便重复选择同一文件
+        e.target.value = '';
     },
 
     // ===== 视频处理 =====
@@ -392,37 +715,48 @@ var Mp42SpritesSkill = {
                     var ctx = canvas.getContext('2d');
                     ctx.drawImage(self._hiddenVideo, 0, 0);
 
-                    self._frames.push({
-                        index: meta.i,
-                        dataUrl: canvas.toDataURL('image/png'),
-                        width: canvas.width,
-                        height: canvas.height,
-                        canvas: canvas
-                    });
+                    function _addVidFrame(readyCanvas) {
+                        self._frames.push({
+                            index: meta.i,
+                            dataUrl: readyCanvas.toDataURL('image/png'),
+                            width: readyCanvas.width,
+                            height: readyCanvas.height,
+                            canvas: readyCanvas,
+                            anchorX: readyCanvas.width / 2,
+                            anchorY: readyCanvas.height / 2,
+                            scaleX: 1,
+                            scaleY: 1,
+                            drawOffsetX: 0,
+                            drawOffsetY: 0
+                        });
 
-                    // 添加到网格
-                    var frameItem = document.createElement('div');
-                    frameItem.className = 'ms-frame-item';
-                    frameItem.dataset.index = meta.i;
-                    frameItem.innerHTML =
-                        '<img src="' + self._frames[meta.i].dataUrl + '" draggable="false">' +
-                        '<div class="ms-frame-number">' + (meta.i + 1) + '</div>' +
-                        '<div class="ms-play-order"></div>' +
-                        '<div class="ms-frame-check">\u2713</div>';
+                        // 添加到网格
+                        var frameItem = document.createElement('div');
+                        frameItem.className = 'ms-frame-item';
+                        frameItem.dataset.index = meta.i;
+                        frameItem.innerHTML =
+                            '<img src="' + self._frames[meta.i].dataUrl + '" draggable="false">' +
+                            '<div class="ms-frame-number">' + (meta.i + 1) + '</div>' +
+                            '<div class="ms-play-order"></div>' +
+                            '<div class="ms-frame-check">\u2713</div>';
 
-                    frameItem.addEventListener('click', (function(idx) {
-                        return function() { self._toggleFrameSelection(idx); };
-                    })(meta.i));
+                        frameItem.addEventListener('click', (function(idx) {
+                            return function() { self._toggleFrameSelection(idx); };
+                        })(meta.i));
 
-                    framesGrid.appendChild(frameItem);
+                        framesGrid.appendChild(frameItem);
 
-                    meta.i++;
-                    var progress = Math.round((meta.i / meta.totalFrames) * 100);
-                    progressFill.style.width = progress + '%';
-                    progressFill.textContent = progress + '%';
-                    framesInfo.textContent = '正在提取帧... ' + meta.i + '/' + meta.totalFrames;
+                        meta.i++;
+                        var progress = Math.round((meta.i / meta.totalFrames) * 100);
+                        progressFill.style.width = progress + '%';
+                        progressFill.textContent = progress + '%';
+                        framesInfo.textContent = '正在提取帧... ' + meta.i + '/' + meta.totalFrames;
 
-                    setTimeout(_captureNext, 0);
+                        setTimeout(_captureNext, 0);
+                    }
+
+                    // 直接添加视频帧（不抠图）
+                    _addVidFrame(canvas);
                 });
             };
 
@@ -440,19 +774,124 @@ var Mp42SpritesSkill = {
         }
     },
 
+    // ===== 盘导入/导出 =====
+
+    _loadImageFromURL: function(dataURL, name) {
+        var self = this;
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            self._frames.push({
+                index: self._frames.length,
+                name: name,
+                dataUrl: dataURL,
+                width: canvas.width,
+                height: canvas.height,
+                canvas: canvas,
+                anchorX: canvas.width / 2,
+                anchorY: canvas.height / 2,
+                scaleX: 1,
+                scaleY: 1,
+                drawOffsetX: 0,
+                drawOffsetY: 0
+            });
+
+            var idx = self._frames.length - 1;
+            var framesGrid = self._overlay.querySelector('#msFramesGrid');
+            var frameItem = document.createElement('div');
+            frameItem.className = 'ms-frame-item';
+            frameItem.dataset.index = idx;
+            frameItem.innerHTML =
+                '<img src="' + dataURL + '" draggable="false">' +
+                '<div class="ms-frame-number">' + (idx + 1) + '</div>' +
+                '<div class="ms-play-order"></div>' +
+                '<div class="ms-frame-check">\u2713</div>';
+            frameItem.addEventListener('click', function() { self._toggleFrameSelection(idx); });
+            framesGrid.appendChild(frameItem);
+
+            self._updateFramesInfo();
+            self._updateButtons();
+            self._applyFrameItemSize(150);
+        };
+        img.src = dataURL;
+    },
+
+    _doCloudExport: function() {
+        var self = this;
+        if (typeof CosCloudDrive === 'undefined') return;
+        this._showLoading('正在存入云盘...');
+
+        var frames = this._selectedFrames.map(function(idx) { return self._frames[idx]; });
+        var ff0 = self._frames[self._selectedFrames[0]];
+        var normSize = ff0 ? Math.max(ff0.width, ff0.height) : 64;
+        var refScale = this._snapToEdge ? 1 : Math.min(this._previewSize * 0.75 / normSize, 1);
+        var pad = this._snapToEdge ? 0 : 10;
+
+        var renderInfos = frames.map(function(frame) {
+            return {
+                w: Math.ceil(frame.width * (frame.scaleX || 1) * refScale),
+                h: Math.ceil(frame.height * (frame.scaleY || 1) * refScale),
+                dx: Math.round((frame.drawOffsetX || 0) * refScale),
+                dy: Math.round((frame.drawOffsetY || 0) * refScale)
+            };
+        });
+
+        var cellHeight = 0;
+        renderInfos.forEach(function(r) {
+            if (r.h + pad * 2 > cellHeight) cellHeight = r.h + pad * 2;
+        });
+
+        var totalW = 0;
+        renderInfos.forEach(function(r) {
+            totalW += r.w + pad * 2;
+        });
+
+        var stripCanvas = document.createElement('canvas');
+        stripCanvas.width = totalW;
+        stripCanvas.height = cellHeight;
+        var stripCtx = stripCanvas.getContext('2d');
+
+        var currentX = 0;
+        renderInfos.forEach(function(r, i) {
+            var drawX = currentX + pad + r.dx;
+            var drawY = Math.round((cellHeight - r.h) / 2) + r.dy;
+            stripCtx.drawImage(frames[i].canvas, drawX, drawY, r.w, r.h);
+            currentX += r.w + pad * 2;
+        });
+
+        this._hideLoading();
+        var stripDataURL = stripCanvas.toDataURL('image/png');
+        CosCloudDrive.add('帧序列图 ' + new Date().toLocaleTimeString(), '帧动画', stripDataURL);
+        if (typeof showToast === 'function') showToast('已存入云盘');
+    },
+
     // ===== 帧渲染辅助 =====
 
     _applyFrameItemSize: function(sizePx) {
         var grid = this._overlay.querySelector('#msFramesGrid');
         if (!grid) return;
+        var self = this;
         var items = grid.querySelectorAll('.ms-frame-item');
         items.forEach(function(item) {
-            item.style.width = sizePx + 'px';
-            item.style.height = sizePx + 'px';
+            var idx = parseInt(item.dataset.index);
+            var frame = self._frames[idx];
+            if (frame && frame.width && frame.height) {
+                var ratio = frame.height / frame.width;
+                item.style.width = sizePx + 'px';
+                item.style.height = Math.round(sizePx * ratio) + 'px';
+            } else {
+                item.style.width = sizePx + 'px';
+                item.style.height = sizePx + 'px';
+            }
             var img = item.querySelector('img');
             if (img) {
-                img.style.width = (sizePx - 4) + 'px';
-                img.style.height = (sizePx - 4) + 'px';
+                img.style.width = '100%';
+                img.style.height = '100%';
             }
         });
     },
@@ -597,10 +1036,18 @@ var Mp42SpritesSkill = {
         var ov = this._overlay;
         var origPlay = ov.querySelector('#msPlayOrigBtn');
         if (origPlay) origPlay.disabled = !hasFrames;
-        var procPlay = ov.querySelector('#msPlayProcBtn');
-        if (procPlay) procPlay.disabled = !has;
+        var prevBtn = ov.querySelector('#msPrevBtn');
+        var playPauseBtn = ov.querySelector('#msPlayPauseBtn');
+        var nextBtn = ov.querySelector('#msNextBtn');
+        if (prevBtn) prevBtn.disabled = !has;
+        if (playPauseBtn) playPauseBtn.disabled = !has;
+        if (nextBtn) nextBtn.disabled = !has;
         var clearBtn = ov.querySelector('#msClearBtn');
         if (clearBtn) clearBtn.disabled = !has;
+        var downloadBtn = ov.querySelector('#msDownloadBtn');
+        if (downloadBtn) downloadBtn.disabled = !has;
+        var cloudExpBtn = ov.querySelector('#msCloudExportBtn');
+        if (cloudExpBtn) cloudExpBtn.disabled = !has || typeof CosCloudDrive === 'undefined';
         // 快速提取按钮
         ['#msOddBtn','#msEvenBtn','#msHalfBtn','#msLoopBtn'].forEach(function(id) {
             var btn = ov.querySelector(id);
@@ -628,12 +1075,20 @@ var Mp42SpritesSkill = {
             var baseSize = 80;
             var size = Math.round(baseSize * self._selectedZoom);
             item.style.width = size + 'px';
-            item.style.height = size + 'px';
 
             item.innerHTML =
-                '<img src="' + frame.dataUrl + '" draggable="false">' +
-                '<div class="ms-selected-order">' + (order + 1) + '</div>' +
-                '<div class="ms-selected-remove">&times;</div>';
+                '<div class="ms-selected-img-wrap" style="height:' + size + 'px;">' +
+                    '<img src="' + frame.dataUrl + '" draggable="false">' +
+                    '<div class="ms-selected-order">' + (order + 1) + '</div>' +
+                    '<div class="ms-selected-remove">&times;</div>' +
+                '</div>' +
+                '<div class="ms-selected-name" title="' + (frame.name || '') + '">' + (frame.name || '帧 ' + (order + 1)) + '</div>';
+
+            var imgWrapH = size;
+            if (frame && frame.width && frame.height) {
+                imgWrapH = Math.round(size * (frame.height / frame.width));
+            }
+            item.querySelector('.ms-selected-img-wrap').style.height = imgWrapH + 'px';
 
             // 移除
             item.querySelector('.ms-selected-remove').addEventListener('click', function(e) {
@@ -702,15 +1157,154 @@ var Mp42SpritesSkill = {
         this._startPlayback(this._procPreviewCanvas, this._procPreviewCtx, selOrder, false);
     },
 
+    _stepFrame: function(dir) {
+        if (this._selectedFrames.length === 0) return;
+        this._stopCanvas(this._procPreviewCanvas);
+        var btn = this._overlay.querySelector('#msPlayPauseBtn');
+        if (btn) btn.textContent = '▶';
+
+        var canvas = this._procPreviewCanvas;
+        if (typeof canvas._currentFrameIdx !== 'number') canvas._currentFrameIdx = 0;
+        canvas._currentFrameIdx += dir;
+        if (canvas._currentFrameIdx < 0) canvas._currentFrameIdx = this._selectedFrames.length - 1;
+        if (canvas._currentFrameIdx >= this._selectedFrames.length) canvas._currentFrameIdx = 0;
+
+        this._renderCurrentFrame();
+    },
+
+    _renderCurrentFrame: function() {
+        var canvas = this._procPreviewCanvas;
+        var ctx = this._procPreviewCtx;
+        if (!canvas || !ctx) return;
+        var idx = canvas._currentFrameIdx;
+        if (typeof idx !== 'number') return;
+        var fi = this._selectedFrames[idx];
+        if (fi === undefined) return;
+        var frame = this._frames[fi];
+        var firstFrame = this._frames[this._selectedFrames[0]];
+        if (!firstFrame) return;
+
+        // 预览画布自动适配容器
+        var container = this._overlay.querySelector('.ms-cell-body');
+        var sz = container ? Math.min(container.clientWidth - 8, container.clientHeight - 8) : 300;
+        sz = Math.max(100, Math.min(sz, 800));
+        this._previewSize = sz;
+        // 只在尺寸变化时重置canvas（避免昂贵的清空操作）
+        if (canvas.width !== sz || canvas.height !== sz) {
+            canvas.width = sz;
+            canvas.height = sz;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        var half = canvas.width / 2;
+
+        // 计算九宫格参考框尺寸（以第一帧尺寸按比例缩放到画布内，占75%）
+        var maxRefW = canvas.width * 0.75;
+        var maxRefH = canvas.height * 0.75;
+        var refScale = Math.min(maxRefW / firstFrame.width, maxRefH / firstFrame.height, 1);
+        var refW = firstFrame.width * refScale;
+        var refH = firstFrame.height * refScale;
+        var refX = half - refW / 2;
+        var refY = half - refH / 2;
+
+        // 画导出区域边框（蓝色）
+        if (this._snapToEdge) {
+            // 贴边模式：蓝色框紧贴九宫格参考框
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(refX, refY, refW, refH);
+        } else {
+            // 非贴边模式：在九宫格基础上固定外扩10px
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(refX - 10, refY - 10, refW + 20, refH + 20);
+        }
+
+        // 画九宫格（内缩1px）
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(refX + 1, refY + 1, refW - 2, refH - 2);
+        // 竖线 1/3 2/3
+        var x1 = refX + refW / 3, x2 = refX + refW * 2 / 3;
+        var y1 = refY + refH / 3, y2 = refY + refH * 2 / 3;
+        ctx.beginPath();
+        ctx.moveTo(x1, refY + 1); ctx.lineTo(x1, refY + refH - 1);
+        ctx.moveTo(x2, refY + 1); ctx.lineTo(x2, refY + refH - 1);
+        ctx.moveTo(refX + 1, y1); ctx.lineTo(refX + refW - 1, y1);
+        ctx.moveTo(refX + 1, y2); ctx.lineTo(refX + refW - 1, y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 画当前帧（按 scaleX/scaleY 缩放，适配预览区大小）
+        var sx = frame.scaleX || 1;
+        var sy = frame.scaleY || 1;
+        var drawX = half - frame.anchorX * refScale + (frame.drawOffsetX || 0) * refScale;
+        var drawY = half - frame.anchorY * refScale + (frame.drawOffsetY || 0) * refScale;
+        var drawW = frame.width * sx * refScale;
+        var drawH = frame.height * sy * refScale;
+        ctx.drawImage(frame.canvas, drawX, drawY, drawW, drawH);
+
+        // 画当前帧的边框和手柄
+        ctx.strokeStyle = 'rgba(56,189,248,0.6)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
+        ctx.setLineDash([]);
+        // 4个角手柄
+        var hs = 6;
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        var pts = [[drawX,drawY],[drawX+drawW,drawY],[drawX,drawY+drawH],[drawX+drawW,drawY+drawH]];
+        pts.forEach(function(p) { ctx.fillRect(p[0]-hs/2,p[1]-hs/2,hs,hs); ctx.strokeRect(p[0]-hs/2,p[1]-hs/2,hs,hs); });
+        // 4边中点
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        var mids = [[drawX+drawW/2,drawY],[drawX+drawW/2,drawY+drawH],[drawX,drawY+drawH/2],[drawX+drawW,drawY+drawH/2]];
+        mids.forEach(function(p) { ctx.fillRect(p[0]-2,p[1]-2,4,4); });
+
+        // 更新帧编号 + 缩放值
+        var indicator = this._overlay.querySelector('#msFrameIndicator');
+        if (indicator) {
+            indicator.innerHTML = '帧 ' + (idx + 1) + ' / ' + this._selectedFrames.length;
+            indicator.style.display = 'block';
+        }
+    },
+
+    _togglePlayPause: function() {
+        var canvas = this._procPreviewCanvas;
+        var btn = this._overlay.querySelector('#msPlayPauseBtn');
+
+        if (canvas._playing) {
+            // 暂停
+            this._stopCanvas(canvas);
+            if (btn) btn.textContent = '▶';
+        } else {
+            // 播放
+            if (this._selectedFrames.length === 0) return;
+            if (btn) btn.textContent = '⏸';
+            var selOrder = this._selectedFrames.slice();
+            this._startPlayback(canvas, this._procPreviewCtx, selOrder, false);
+        }
+    },
+
     _startPlayback: function(canvas, ctx, frameIndices, applyMatting) {
         if (frameIndices.length === 0) return;
         this._stopCanvas(canvas);
 
-        var firstFrame = this._frames[frameIndices[0]];
-        canvas.width = firstFrame.width;
-        canvas.height = firstFrame.height;
-
         var self = this;
+        // 预览画布自动适配容器
+        var container = this._overlay.querySelector('.ms-cell-body');
+        var sz = container ? Math.min(container.clientWidth - 8, container.clientHeight - 8) : 300;
+        sz = Math.max(100, Math.min(sz, 800));
+        self._previewSize = sz;
+        // 只在尺寸变化时重置canvas（避免昂贵的清空操作）
+        if (canvas.width !== sz || canvas.height !== sz) {
+            canvas.width = sz;
+            canvas.height = sz;
+        }
+        var half = canvas.width / 2;
+        var firstFrame = this._frames[frameIndices[0]];
         var pending = frameIndices.length;
 
         function onImageReady() {
@@ -725,13 +1319,54 @@ var Mp42SpritesSkill = {
                 if (!canvas._playing) return;
                 var idx = frameIndices[canvas._frameIdx];
                 var srcFrame = self._frames[idx];
+
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (applyMatting) {
-                    self._removeBackground(srcFrame.canvas).then(function(resultCanvas) {
-                        ctx.drawImage(resultCanvas, 0, 0);
-                    });
+
+                // 画九宫格参考框
+                var maxRefW = canvas.width * 0.75;
+                var maxRefH = canvas.height * 0.75;
+                var refS = Math.min(maxRefW / firstFrame.width, maxRefH / firstFrame.height, 1);
+                var rw = firstFrame.width * refS, rh = firstFrame.height * refS;
+                var rx = half - rw/2, ry = half - rh/2;
+
+                // 画导出区域边框（蓝色）
+                if (self._snapToEdge) {
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeRect(rx, ry, rw, rh);
                 } else {
-                    ctx.drawImage(srcFrame.canvas, 0, 0);
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(rx - 10, ry - 10, rw + 20, rh + 20);
+                }
+
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(rx+1, ry+1, rw-2, rh-2);
+                var x1 = rx + rw/3, x2 = rx + rw*2/3, y1 = ry + rh/3, y2 = ry + rh*2/3;
+                ctx.beginPath();
+                ctx.moveTo(x1, ry+1); ctx.lineTo(x1, ry+rh-1);
+                ctx.moveTo(x2, ry+1); ctx.lineTo(x2, ry+rh-1);
+                ctx.moveTo(rx+1, y1); ctx.lineTo(rx+rw-1, y1);
+                ctx.moveTo(rx+1, y2); ctx.lineTo(rx+rw-1, y2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 画当前帧（从左上角拉伸，适配预览区大小）
+                var sx = srcFrame.scaleX || 1;
+                var sy = srcFrame.scaleY || 1;
+                var dX = half - srcFrame.anchorX * refS + (srcFrame.drawOffsetX || 0) * refS;
+                var dY = half - srcFrame.anchorY * refS + (srcFrame.drawOffsetY || 0) * refS;
+                ctx.drawImage(srcFrame.canvas, dX, dY, srcFrame.width * sx * refS, srcFrame.height * sy * refS);
+
+                // 更新帧编号显示
+                if (canvas === self._procPreviewCanvas) {
+                    var indicator = self._overlay.querySelector('#msFrameIndicator');
+                    if (indicator) {
+                        indicator.innerHTML = '帧 ' + (canvas._frameIdx + 1) + ' / ' + frameIndices.length;
+                        indicator.style.display = 'block';
+                    }
                 }
                 canvas._frameIdx = (canvas._frameIdx + 1) % frameIndices.length;
             }
@@ -754,6 +1389,11 @@ var Mp42SpritesSkill = {
             if (canvas._animId) {
                 clearInterval(canvas._animId);
                 canvas._animId = null;
+            }
+            // 更新播放按钮为播放状态
+            if (canvas === this._procPreviewCanvas) {
+                var btn = this._overlay.querySelector('#msPlayPauseBtn');
+                if (btn) btn.textContent = '▶';
             }
         }
     },
@@ -780,13 +1420,31 @@ var Mp42SpritesSkill = {
         function processNext() {
             if (idx >= playOrder.length) {
                 self._hideLoading();
-                var firstFrame = processedFrames[0];
+
+                // 计算锚点对齐所需的边界
+                var maxLeft = 0, maxRight = 0, maxTop = 0, maxBottom = 0;
+                processedFrames.forEach(function(cf, i) {
+                    var frameIdx = self._selectedFrames[playOrder[i]];
+                    var frame = self._frames[frameIdx];
+                    var ax = frame.anchorX, ay = frame.anchorY;
+                    var left = ax, right = cf.width - ax;
+                    var top = ay, bottom = cf.height - ay;
+                    if (left > maxLeft) maxLeft = left;
+                    if (right > maxRight) maxRight = right;
+                    if (top > maxTop) maxTop = top;
+                    if (bottom > maxBottom) maxBottom = bottom;
+                });
+
+                var cellW = Math.ceil(maxLeft + maxRight);
+                var cellH = Math.ceil(maxTop + maxBottom);
                 var stripCanvas = document.createElement('canvas');
-                stripCanvas.width = firstFrame.width * processedFrames.length;
-                stripCanvas.height = firstFrame.height;
+                stripCanvas.width = cellW * processedFrames.length;
+                stripCanvas.height = cellH;
                 var stripCtx = stripCanvas.getContext('2d');
                 processedFrames.forEach(function(canvas, i) {
-                    stripCtx.drawImage(canvas, i * firstFrame.width, 0);
+                    var frameIdx = self._selectedFrames[playOrder[i]];
+                    var frame = self._frames[frameIdx];
+                    stripCtx.drawImage(canvas, i * cellW + maxLeft - frame.anchorX, maxTop - frame.anchorY);
                 });
                 var stripDataURL = stripCanvas.toDataURL('image/png');
                 var link = document.createElement('a');
@@ -818,38 +1476,103 @@ var Mp42SpritesSkill = {
         setTimeout(processNext, 100);
     },
 
+    // ===== 下载对齐序列图（等间距排列） =====
+
+    _downloadAlignedStrip: function() {
+        var self = this;
+        if (this._selectedFrames.length === 0) return;
+        this._showLoading('正在生成序列图...');
+
+        var frames = this._selectedFrames.map(function(idx) { return self._frames[idx]; });
+        var ff0 = self._frames[self._selectedFrames[0]];
+        var normSize = ff0 ? Math.max(ff0.width, ff0.height) : 64;
+        var refScale = this._snapToEdge ? 1 : Math.min(this._previewSize * 0.75 / normSize, 1);
+        var pad = this._snapToEdge ? 0 : 10;
+
+        // 先算所有帧的渲染尺寸，找出最大高度
+        var renderInfos = frames.map(function(frame) {
+            return {
+                w: Math.ceil(frame.width * (frame.scaleX || 1) * refScale),
+                h: Math.ceil(frame.height * (frame.scaleY || 1) * refScale),
+                dx: Math.round((frame.drawOffsetX || 0) * refScale),
+                dy: Math.round((frame.drawOffsetY || 0) * refScale)
+            };
+        });
+
+        // 每个格子宽度 = 实际渲染宽度 + 两侧padding
+        // strip高度 = 所有格子高度的最大值（含padding）
+        var cellHeight = 0;
+        renderInfos.forEach(function(r) {
+            if (r.h + pad * 2 > cellHeight) cellHeight = r.h + pad * 2;
+        });
+
+        var totalW = 0;
+        renderInfos.forEach(function(r) {
+            totalW += r.w + pad * 2;
+        });
+
+        var stripCanvas = document.createElement('canvas');
+        stripCanvas.width = totalW;
+        stripCanvas.height = cellHeight;
+        var stripCtx = stripCanvas.getContext('2d');
+
+        var currentX = 0;
+        renderInfos.forEach(function(r, i) {
+            var drawX = currentX + pad + r.dx;
+            var drawY = Math.round((cellHeight - r.h) / 2) + r.dy;
+            stripCtx.drawImage(frames[i].canvas, drawX, drawY, r.w, r.h);
+            currentX += r.w + pad * 2;
+        });
+
+        this._hideLoading();
+        var stripDataURL = stripCanvas.toDataURL('image/png');
+        var link = document.createElement('a');
+        link.download = 'aligned_sequence_' + new Date().getTime() + '.png';
+        link.href = stripDataURL;
+        link.click();
+
+        if (typeof CosCloudDrive !== 'undefined') {
+            CosCloudDrive.add('对齐序列图 ' + new Date().toLocaleTimeString(), '帧动画', stripDataURL);
+        }
+    },
+
     // ===== 背景抠图 =====
 
     _removeBackground: function(sourceCanvas) {
+        var self = this;
         return new Promise(function(resolve) {
             var canvas = document.createElement('canvas');
             canvas.width = sourceCanvas.width;
             canvas.height = sourceCanvas.height;
             var ctx = canvas.getContext('2d');
             ctx.drawImage(sourceCanvas, 0, 0);
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            var data = imageData.data;
-            var bgColor = _detectBackgroundColor(data, canvas.width, canvas.height);
-            var tolerance = 50;
-            var edgeTolerance = 30;
 
-            for (var i = 0; i < data.length; i += 4) {
-                var r = data[i], g = data[i + 1], b = data[i + 2];
-                var dist = Math.sqrt(Math.pow(r - bgColor.r, 2) + Math.pow(g - bgColor.g, 2) + Math.pow(b - bgColor.b, 2));
-                if (dist < tolerance) {
-                    data[i + 3] = 0;
-                } else if (dist < tolerance + edgeTolerance) {
-                    var alpha = Math.round(((dist - tolerance) / edgeTolerance) * 255);
-                    data[i + 3] = alpha;
-                    var blend = alpha / 255;
-                    data[i] = Math.round(bgColor.r + (r - bgColor.r) * blend);
-                    data[i + 1] = Math.round(bgColor.g + (g - bgColor.g) * blend);
-                    data[i + 2] = Math.round(bgColor.b + (b - bgColor.b) * blend);
+            // 使用 setTimeout 让出主线程
+            setTimeout(function() {
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                var data = imageData.data;
+                var bgColor = _detectBackgroundColor(data, canvas.width, canvas.height);
+                var tolerance = 50;
+                var edgeTolerance = 30;
+
+                for (var i = 0; i < data.length; i += 4) {
+                    var r = data[i], g = data[i + 1], b = data[i + 2];
+                    var dist = Math.sqrt(Math.pow(r - bgColor.r, 2) + Math.pow(g - bgColor.g, 2) + Math.pow(b - bgColor.b, 2));
+                    if (dist < tolerance) {
+                        data[i + 3] = 0;
+                    } else if (dist < tolerance + edgeTolerance) {
+                        var alpha = Math.round(((dist - tolerance) / edgeTolerance) * 255);
+                        data[i + 3] = alpha;
+                        var blend = alpha / 255;
+                        data[i] = Math.round(bgColor.r + (r - bgColor.r) * blend);
+                        data[i + 1] = Math.round(bgColor.g + (g - bgColor.g) * blend);
+                        data[i + 2] = Math.round(bgColor.b + (b - bgColor.b) * blend);
+                    }
                 }
-            }
 
-            ctx.putImageData(imageData, 0, 0);
-            resolve(canvas);
+                ctx.putImageData(imageData, 0, 0);
+                resolve(canvas);
+            }, 0);
         });
     },
 
@@ -950,8 +1673,15 @@ function _detectBackgroundColor(data, width, height) {
             'background:rgba(0,0,0,.3);border-radius:8px;overflow:hidden; }' +
         '.ms-play-canvas { max-width:100%;max-height:100%;object-fit:contain; }' +
 
-        /* 上传区域 */
-        '.ms-upload-area { margin-bottom:10px;text-align:center;flex-shrink:0; }' +
+        /* 上传菜单 */
+        '.ms-upload-area { margin-bottom:10px;text-align:center;flex-shrink:0;position:relative; }' +
+        '.ms-upload-menu { position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:6px;' +
+            'background:rgba(20,35,70,0.95);border:1px solid rgba(100,160,255,0.25);border-radius:10px;' +
+            'padding:6px;display:flex;flex-direction:column;gap:4px;z-index:20;min-width:180px;' +
+            'box-shadow:0 8px 24px rgba(0,0,0,.4); }' +
+        '.ms-menu-item { padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;' +
+            'font-weight:600;color:#e8edf5;background:transparent;transition:all .15s;text-align:left; }' +
+        '.ms-menu-item:hover { background:rgba(56,189,248,.15); }' +
         '.ms-upload-btn { padding:10px 28px;border:none;border-radius:10px;cursor:pointer;' +
             'font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#38bdf8,#0ea5e9);' +
             'box-shadow:0 4px 14px rgba(56,189,248,.25);transition:all .15s; }' +
@@ -1017,9 +1747,11 @@ function _detectBackgroundColor(data, width, height) {
             'transition:all .15s;border:2px solid transparent;flex-shrink:0; }' +
         '.ms-frame-item:hover { transform:scale(1.03);box-shadow:0 4px 12px rgba(0,0,0,.3); }' +
         '.ms-frame-item.selected { border-color:#38bdf8;box-shadow:0 0 12px rgba(56,189,248,.4); }' +
-        '.ms-frame-item img { display:block;object-fit:cover;border-radius:6px; }' +
+        '.ms-frame-item img { display:block;object-fit:contain;border-radius:6px; }' +
         '.ms-frame-number { position:absolute;top:3px;left:3px;background:rgba(0,0,0,.7);color:#fff;' +
             'padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700; }' +
+        '.ms-frame-name { position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.65);color:#94a3b8;' +
+            'padding:2px 4px;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center; }' +
         '.ms-play-order { position:absolute;top:3px;right:26px;background:rgba(56,189,248,.9);color:#fff;' +
             'padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700;display:none;min-width:16px;text-align:center; }' +
         '.ms-frame-item.selected .ms-play-order { display:block; }' +
@@ -1042,6 +1774,8 @@ function _detectBackgroundColor(data, width, height) {
         '.ms-selected-item.drag-over { border:2px dashed #38bdf8; }' +
         '.ms-selected-item:hover { transform:scale(1.08);box-shadow:0 4px 12px rgba(56,189,248,.3); }' +
         '.ms-selected-item img { width:100%;height:100%;object-fit:cover; }' +
+        '.ms-selected-item .ms-selected-img-wrap { width:100%;position:relative; }' +
+        '.ms-selected-item .ms-selected-name { font-size:10px;color:#94a3b8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 2px; }' +
         '.ms-selected-order { position:absolute;top:2px;left:2px;background:rgba(56,189,248,.9);color:#fff;' +
             'padding:1px 4px;border-radius:3px;font-size:9px;font-weight:700; }' +
         '.ms-selected-remove { position:absolute;top:2px;right:2px;width:14px;height:14px;background:rgba(220,80,60,.8);' +

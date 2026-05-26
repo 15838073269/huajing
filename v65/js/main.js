@@ -48,7 +48,7 @@
         var promises = PLUGIN_LIST.map(function(src) {
             return new Promise(function(resolve) {
                 var s = document.createElement('script');
-                s.src = src + '?v=111';
+                s.src = src + '?v=122';
                 s.onload = resolve;
                 s.onerror = function() { console.warn('[PluginLoader] 加载失败: ' + src); resolve(); };
                 document.head.appendChild(s);

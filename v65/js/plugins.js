@@ -11,6 +11,7 @@ var PLUGIN_LIST = [
     'js/skills/mao-quotes.js',      // 📕 信仰语录 - 每60秒随机展示
     'js/skills/prompt-template.js', // 💬 提示词模板 - AI绘画提示词[变量]管理
     'js/skills/nav-bookmarks.js',   // 🧭 导航网址 - 网址收藏+标签分类
+    // 'js/skills/ui-debugger.js',  // 🐛 UI调试器 - 可视化调整前端样式
 
     // === 图片处理 ===
     'js/skills/audio-cleaner.js',   // 🎧 音频清理 - 导入音频+自动降噪剪辑+导出
@@ -33,13 +34,23 @@ var PLUGIN_LIST = [
     'js/skills/pixel-paint.js',  // 像素画 - 数字像素绘画系统
 
     // === 动画 ===
-    'js/skills/spine-animate.js', // 🦴 骨骼动画 - FK/IK/约束/缓动/弹性物理
+    // 'js/skills/spine-animate.js', // 🦴 骨骼动画 - FK/IK/约束/缓动/弹性物理
 
     // === 叠图 ===
     'js/skills/tile-replace.js',  // 🧩 叠图替换 - Marching Squares 自动瓦片
 
+    // === 字体 ===
+    // 'js/skills/font-craft.js',        // 字体工坊 - 已隐藏
+
     // === AI ===
-    'js/skills/ai-image-gen.js',  // 🎨 AI生图 - AI图片生成
+    'js/skills/ai-image-gen.js',  // 🎨 AI生图 - AI图片生成（DOM版）
+    // 'js/skills/ai-image-gen-canvas.js',  // ❌ 旧版（仅静态渲染，无交互）
+
+    // === 引擎 ===
+    // 'js/skills/game-loop.js',   // ▶ 游戏循环 - 演示独立 game loop 驱动的迷你游戏
+
+    // === AI 协作 ===
+    // 'js/skills/gui.js',     // 规 - Game Dev Agent Cluster（多AI角色协作+文档+生图）
 ];
 
 /**
@@ -59,9 +70,13 @@ var PLUGIN_NUMBERS = {
     'drawing': 11,
     'node-editor': 13,
     'pixel-paint': 14,
-    'spine-animate': 15,
+    // 'spine-animate': 15,
     'audio-cleaner': 16,
     'nine-slice': 17,
     'tile-replace': 18,
-    'ai-image-gen': 19
+    'ai-image-gen': 19,
+    // 'ui-debugger': 20,
+    // 'game-loop': 21,
+    // 'gui': 22,
+    // 'font-craft': 20
 };

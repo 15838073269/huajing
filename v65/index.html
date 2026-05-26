@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>画境 v65</title>
     <link rel="stylesheet" href="css/style.css?v=65">
+    <link rel="stylesheet" href="css/override.css?v=112">
 </head>
 <body>
 
@@ -40,6 +41,14 @@
     <script src="js/core/skills.js?v=111"></script>
     <script src="js/core/plugin-loader.js?v=111"></script>
     <script src="js/core/storage.js?v=111"></script>
+    <!-- CosAPI + CosUI（低代码基础设施） -->
+    <script src="js/core/cos-api.js?v=122"></script>
+    <script src="js/core/cos-ui.js?v=122"></script>
+
+    <!-- 函数注册 + 工作流引擎（AI 可调用的通用函数系统） -->
+    <script src="js/core/function-registry.js?v=123"></script>
+    <script src="js/core/workflow-runner.js?v=123"></script>
+    <script src="js/functions/register.js?v=123"></script>
 
     <!-- 设置（固定功能，非插件） -->
     <script src="js/skills/settings.js?v=111"></script>
@@ -54,11 +63,18 @@
     <!-- 音频清理插件 -->
     <script src="js/skills/audio-cleaner.js?v=111"></script>
 
-    <!-- Three.js（3D渲染库） -->
-    <script src="js/lib/three.min.js?v=111"></script>
-    <script src="js/lib/OrbitControls.js?v=111"></script>
-    <!-- 像素画3D扩展（必须在 pixel-paint.js 之前） -->
-    <script src="js/skills/pixel-paint-3d.js?v=111"></script>
+    <!-- UI 调试器 -->
+    <script src="js/skills/ui-debugger.js?v=122"></script>
+
+    <!-- Three.js（3D渲染库，已删除） -->
+    <!-- <script src="js/lib/three.min.js?v=111"></script> -->
+    <!-- <script src="js/lib/OrbitControls.js?v=111"></script> -->
+    <!-- LiteGraph.js（Canvas 节点渲染库） -->
+    <script src="js/lib/litegraph.js?v=111"></script>
+    <!-- opentype.js（字体生成库，font-craft 插件已隐藏） -->
+    <!-- <script src="js/lib/opentype.min.js"></script> -->
+    <!-- 像素画3D扩展（已删除） -->
+    <!-- <script src="js/skills/pixel-paint-3d.js?v=111"></script> -->
 
     <!-- 启动（必须最后加载） -->
     <script src="js/main.js?v=111"></script>
