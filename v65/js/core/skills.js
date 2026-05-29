@@ -86,14 +86,60 @@ var SkillSystem = (function() {
     // 获取商店中的插件
     function getPlugins() { return plugins; }
 
-    // 显示插件包裹（改用独立窗口，和插件窗口一致）
-    function showStore() {
-        var installed = Object.keys(skills);
-        var available = Object.keys(plugins);
+    var ZONE_KEYS = ['red', 'green', 'blue'];
+    var ZONE_COLORS = { red: '#ef4444', green: '#4ecca3', blue: '#38bdf8' };
+    function _getZoneColor(zone) { return ZONE_COLORS[zone] || null; }
+    function _getAssignments() {
+        try { return JSON.parse(localStorage.getItem('cos-bag-assignments')) || {}; } catch(e) { return {}; }
+    }
+    function _saveAssignments(a) {
+        try { localStorage.setItem('cos-bag-assignments', JSON.stringify(a)); } catch(e) {}
+    }
+    function _getDisabled() {
+        try { return JSON.parse(localStorage.getItem('cos-bag-disabled')) || []; } catch(e) { return []; }
+    }
+    function _saveDisabled(d) {
+        try { localStorage.setItem('cos-bag-disabled', JSON.stringify(d)); } catch(e) {}
+    }
+    function _toggleDisabled(id) {
+        var d = _getDisabled();
+        var idx = d.indexOf(id);
+        if (idx === -1) d.push(id);
+        else d.splice(idx, 1);
+        _saveDisabled(d);
+        return d;
+    }
+    // 迁移旧数据：按 icon 原有颜色自动分配
+    function _initAssignments() {
+        var a = _getAssignments();
+        var changed = false;
+        Object.keys(skills).forEach(function(id) {
+            if (a[id]) return;
+            var s = skills[id];
+            var m = s.icon && s.icon.match(/color:#([a-f0-9]+)/i);
+            var c = m ? m[1].toLowerCase() : '';
+            var zone = c === 'ef4444' ? 'red' : c === '4ecca3' ? 'green' : c === '38bdf8' ? 'blue' : null;
+            if (zone) { a[id] = zone; changed = true; }
+        });
+        if (changed) _saveAssignments(a);
+    }
+    // 插件图标替换为区域颜色
+    function _getSkillIcon(skill, zone) {
+        var zc = _getZoneColor(zone);
+        if (!zc) return skill.icon || '';
+        var icon = skill.icon || '';
+        if (/color:#[a-f0-9]+/i.test(icon)) {
+            return icon.replace(/color:#[a-f0-9]+/gi, 'color:' + zc);
+        }
+        return '<span style="color:' + zc + ';">' + icon + '</span>';
+    }
 
-        // 关闭已有的包裹窗口
+    function showStore() {
         var oldBag = document.querySelector('[data-skill-id="__bag__"]');
         if (oldBag) { oldBag.remove(); }
+
+        _initAssignments();
+        var assignments = _getAssignments();
 
         var ov = document.createElement('div');
         ov.setAttribute('data-skill-id', '__bag__');
@@ -103,8 +149,34 @@ var SkillSystem = (function() {
             'position:fixed;z-index:' + topZ + ';background:#0f1525;color:#e8edf5;border-radius:12px;' +
             'border:1px solid rgba(100,160,255,0.15);box-shadow:0 8px 40px rgba(0,0,0,0.6);' +
             'overflow:hidden;display:flex;flex-direction:column;font-size:13px;' +
-            'width:380px;height:400px;left:' + Math.max(20, (window.innerWidth - 380) / 2) + 'px;' +
-            'top:' + Math.max(20, (window.innerHeight - 400) / 2) + 'px;';
+            'width:420px;height:500px;left:' + Math.max(20, (window.innerWidth - 420) / 2) + 'px;' +
+            'top:' + Math.max(20, (window.innerHeight - 500) / 2) + 'px;';
+
+        function _defaultZone(s) {
+            var m = s.icon && s.icon.match(/color:#([a-f0-9]+)/i);
+            var c = m ? m[1].toLowerCase() : '';
+            return c === 'ef4444' ? 'red' : c === '4ecca3' ? 'green' : 'blue';
+        }
+
+        var disabledList = _getDisabled();
+        var zoneItems = { red: [], green: [], blue: [] };
+        var allIds = {};
+        Object.keys(skills).forEach(function(id) { allIds[id] = skills[id]; });
+        Object.keys(plugins).forEach(function(id) { if (!allIds[id]) allIds[id] = plugins[id]; });
+
+        Object.keys(allIds).forEach(function(id) {
+            var s = allIds[id];
+            var zone = assignments[id] || _defaultZone(s);
+            var isAssigned = !!assignments[id];
+            var isDisabled = disabledList.indexOf(id) !== -1;
+            zoneItems[zone].push({ id: id, skill: s, installed: !!skills[id], assigned: isAssigned, disabled: isDisabled });
+        });
+
+        var zoneMeta = [
+            { key: 'red',   label: '红', cssColor: '#ef4444' },
+            { key: 'green', label: '绿', cssColor: '#4ecca3' },
+            { key: 'blue',  label: '蓝', cssColor: '#38bdf8' }
+        ];
 
         var html =
             '<div class="cos-overlay-header" style="display:flex;align-items:center;justify-content:space-between;' +
@@ -112,59 +184,101 @@ var SkillSystem = (function() {
             '<span style="font-weight:600;color:#38bdf8;font-size:14px;">包裹</span>' +
             '<span class="cos-overlay-close" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;' +
             'border-radius:6px;cursor:pointer;color:#94a3b8;font-size:16px;">×</span></div>' +
-            '<div class="cos-overlay-body" style="flex:1;overflow-y:auto;padding:10px 14px;">' +
-            '<div class="cos-bag">' +
-            '<div class="cos-bag-search"><input type="text" class="cos-bag-search-input" id="cosBagSearch" ' +
-            'placeholder="输入编号或名称搜索..." style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid rgba(100,160,255,0.12);' +
-            'background:rgba(20,30,60,0.5);color:#e8edf5;font-size:12px;outline:none;"></div>' +
-            '<div class="cos-bag-zone-label" style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">已装备</div>' +
-            '<div class="cos-bag-zone" id="cosBagInstalled" data-zone="installed" style="display:flex;flex-wrap:wrap;gap:4px;">';
+            '<div class="cos-overlay-body" style="flex:1;overflow-y:auto;padding:6px 14px 10px;">';
 
-        installed.forEach(function(id, idx) {
-            var s = skills[id];
-            var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[id]) ? PLUGIN_NUMBERS[id] : '';
-            html += '<div class="cos-bag-item installed" draggable="true" data-id="' + id + '" data-zone="installed" title="' + s.name + '" ' +
-                'style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;border:1px solid rgba(100,160,255,0.08);' +
-                'background:rgba(20,30,60,0.4);cursor:grab;font-size:12px;">' +
-                '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span>' +
-                (num ? '<span class="cos-bag-num" style="font-size:10px;color:#475569;margin-left:2px;">' + num + '</span>' : '') + '</div>';
+        // 3 个拖拽区域
+        zoneMeta.forEach(function(meta) {
+            var items = zoneItems[meta.key];
+            html += '<div class="cos-bag-zone" data-zone="' + meta.key + '" ' +
+                'style="margin-bottom:8px;border:1px dashed ' + meta.cssColor + '30;border-radius:8px;padding:6px 8px;' +
+                'min-height:0;transition:border-color .2s,background .2s;' +
+                'background:' + (items.length ? meta.cssColor + '08' : 'transparent') + ';">' +
+                '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+                '<span style="width:8px;height:8px;border-radius:50%;background:' + meta.cssColor + ';box-shadow:0 0 6px ' + meta.cssColor + '40;"></span>' +
+                '<span style="font-size:11px;font-weight:600;color:' + meta.cssColor + ';">' + meta.label + '</span>' +
+                '<span style="font-size:10px;color:#475569;">' + items.length + '</span>' +
+                '</div>' +
+                '<div class="cos-bag-zone-inner" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;">';
+            items.forEach(function(item) {
+                var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[item.id]) ? PLUGIN_NUMBERS[item.id] : '';
+                var itemColor = item.assigned ? meta.cssColor : null;
+                if (item.disabled) itemColor = '#666';
+                html += _bagItemHtml(item, itemColor, num);
+            });
+            html += '</div></div>';
         });
-        html += '</div>';
 
-        html += '<div class="cos-bag-zone-label" style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">背包</div>';
-        html += '<div class="cos-bag-zone" id="cosBagAvailable" data-zone="available" style="display:flex;flex-wrap:wrap;gap:4px;">';
-        available.forEach(function(id) {
-            var s = plugins[id];
-            html += '<div class="cos-bag-item" draggable="true" data-id="' + id + '" data-zone="available" title="' + s.name + '" ' +
-                'style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;border:1px solid rgba(100,160,255,0.08);' +
-                'background:rgba(20,30,60,0.2);cursor:grab;font-size:12px;">' +
-                '<span class="cos-bag-icon">' + s.icon + '</span><span class="cos-bag-name">' + s.name + '</span></div>';
-        });
-        html += '</div>';
-
-        if (installed.length === 0 && available.length === 0) {
-            html += '<div style="text-align:center;padding:20px;color:var(--cos-text-dim);">暂无可用插件</div>';
+        if (Object.keys(allIds).length === 0) {
+            html += '<div style="text-align:center;padding:30px 0;color:#475569;">暂无可用插件</div>';
         }
-
-        html += '</div></div>';
+        html += '</div>';
 
         ov.innerHTML = html;
+
+        function _bagItemHtml(item, zoneColor, num) {
+            var icon = item.skill.icon || '';
+            var c = item.disabled ? '#666' : zoneColor;
+            if (c) {
+                if (/color:#[a-f0-9]+/i.test(icon)) {
+                    icon = icon.replace(/color:#[a-f0-9]+/gi, 'color:' + c);
+                } else {
+                    icon = '<span style="color:' + c + ';">' + icon + '</span>';
+                }
+            }
+            var dimmed = !c;
+            return '<div class="cos-bag-item" draggable="true" data-id="' + item.id + '" ' +
+                'style="width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+                'border-radius:8px;border:1px solid ' + (dimmed ? 'rgba(100,160,255,0.08)' : c + '50') + ';' +
+                'background:' + (dimmed ? 'rgba(20,30,60,0.2)' : c + '15') + ';' +
+                'color:#e8edf5;transition:all .15s;position:relative;user-select:none;cursor:grab;' +
+                'opacity:' + (dimmed ? '0.4' : '1') + ';" title="' + item.skill.name + '">' +
+                '<span style="font-size:16px;font-weight:bold;">' + icon + '</span>' +
+                '<span style="font-size:8px;color:#94a3b8;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48px;text-align:center;">' + item.skill.name + '</span>' +
+                (num ? '<span style="position:absolute;right:1px;bottom:1px;font-size:7px;color:#475569;">' + num + '</span>' : '') +
+                '</div>';
+        }
         document.body.appendChild(ov);
 
-        // 禁用右键菜单
         ov.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
-        // 预设初始尺寸位置（始终覆盖，防止旧数据缺 left/top 导致跑角落）
         try {
-            var cl = Math.max(20, (window.innerWidth - 380) / 2);
-            var ct = Math.max(20, (window.innerHeight - 400) / 2);
-            localStorage.setItem('cos-bag-rect', JSON.stringify({ w: 380, h: 400, l: Math.round(cl), t: Math.round(ct) }));
+            var saved = JSON.parse(localStorage.getItem('cos-bag-rect'));
+            if (saved && saved.h) {
+                var sw = window.innerWidth, sh = window.innerHeight;
+                var w = Math.min(saved.w, sw - 20);
+                var h = Math.min(saved.h, sh - 20);
+                var l = Math.max(0, Math.min(saved.l, sw - w));
+                var t = Math.max(0, Math.min(saved.t, sh - h));
+                ov.style.width = w + 'px';
+                ov.style.height = h + 'px';
+                ov.style.left = l + 'px';
+                ov.style.top = t + 'px';
+            } else {
+                // 手动计算高度：每行 58px(52 图标 + 6 gap)，420px 宽约 7 个/行
+                var _zoneH = 0;
+                ['red','green','blue'].forEach(function(k) {
+                    var n = zoneItems[k] ? zoneItems[k].length : 0;
+                    if (!n) { _zoneH += 56; return; } // 空：label(16) + inner min(30) + pad(2) + margin(8)
+                    var rows = Math.ceil(n / 7);
+                    var innerH = Math.max(rows * 58, 30);
+                    _zoneH += 12 + innerH + 8; // padding + inner + margin-bottom
+                });
+                var totalH = Math.min(_zoneH + 56, window.innerHeight - 40); // + header(~40) + body pad(16)
+                totalH = Math.max(totalH, 120);
+                var cl = Math.max(20, (window.innerWidth - 420) / 2);
+                var ct = Math.max(20, (window.innerHeight - totalH) / 2);
+                ov.style.width = '420px';
+                ov.style.height = totalH + 'px';
+                ov.style.left = cl + 'px';
+                ov.style.top = ct + 'px';
+                localStorage.setItem('cos-bag-rect', JSON.stringify({ w: 420, h: totalH, l: Math.round(cl), t: Math.round(ct) }));
+            }
         } catch(e) {}
         if (typeof WindowHelper !== 'undefined') {
-            WindowHelper.makeResizable(ov, { minWidth: 320, minHeight: 250, storeKey: 'cos-bag-rect' });
+            WindowHelper.makeResizable(ov, { minWidth: 300, minHeight: 200, storeKey: 'cos-bag-rect' });
         }
 
-        // 拖拽
+        // 标题栏拖拽
         var header = ov.querySelector('.cos-overlay-header');
         var dState = { active: false, sx: 0, sy: 0, ox: 0, oy: 0 };
         header.addEventListener('mousedown', function(e) {
@@ -184,121 +298,98 @@ var SkillSystem = (function() {
         document.addEventListener('mousemove', onBagMove);
         document.addEventListener('mouseup', onBagUp);
 
-        // 关闭
         ov.querySelector('.cos-overlay-close').addEventListener('click', function() {
             document.removeEventListener('mousemove', onBagMove);
             document.removeEventListener('mouseup', onBagUp);
             ov.remove();
         });
-
-        // 点击置顶
         ov.addEventListener('mousedown', function() {
             var tz = (window.__cos_topZ || 10000) + 1;
             window.__cos_topZ = tz;
             ov.style.zIndex = tz;
         });
 
-        setTimeout(function() {
-            // 搜索过滤
-            var searchInput = document.getElementById('cosBagSearch');
-            var allItems = document.querySelectorAll('.cos-bag-item');
-            var installedItems = document.querySelectorAll('#cosBagInstalled .cos-bag-item');
-            var availableItems = document.querySelectorAll('#cosBagAvailable .cos-bag-item');
-            if (searchInput) {
-                searchInput.focus();
-                searchInput.addEventListener('input', function() {
-                    var query = this.value.trim().toLowerCase();
-                    allItems.forEach(function(item) {
-                        if (!query) {
-                            item.style.display = '';
-                            return;
-                        }
-                        var numVal = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[item.dataset.id]) ? String(PLUGIN_NUMBERS[item.dataset.id]) : '';
-                        var nameVal = (item.dataset.zone === 'installed' ? skills[item.dataset.id] : plugins[item.dataset.id]);
-                        nameVal = nameVal ? nameVal.name.toLowerCase() : '';
-                        var match = numVal === query || nameVal.indexOf(query) >= 0;
-                        item.style.display = match ? '' : 'none';
-                    });
-                });
-            }
+        // 清理旧 tips，创建新 tip
+        var oldTip = document.querySelector('.cos-bag-tip');
+        if (oldTip) oldTip.remove();
+        var tip = document.createElement('div');
+        tip.className = 'cos-bag-tip';
+        document.body.appendChild(tip);
 
-            var installedZone = document.getElementById('cosBagInstalled');
-            var availableZone = document.getElementById('cosBagAvailable');
-            if (!installedZone || !availableZone) return;
+        ov.querySelectorAll('.cos-bag-zone').forEach(function(zone) {
+            zone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                zone.style.borderColor = (_getZoneColor(zone.dataset.zone) || '#666') + '80';
+                zone.style.background = (_getZoneColor(zone.dataset.zone) || '#666') + '15';
+            });
+            zone.addEventListener('dragleave', function() {
+                var m = zoneMeta.find(function(x) { return x.key === zone.dataset.zone; });
+                zone.style.borderColor = m ? m.cssColor + '30' : 'rgba(100,160,255,0.12)';
+                zone.style.background = 'transparent';
+            });
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                var m2 = zoneMeta.find(function(x) { return x.key === zone.dataset.zone; });
+                zone.style.borderColor = m2 ? m2.cssColor + '30' : 'rgba(100,160,255,0.12)';
+                zone.style.background = 'transparent';
+                var dragId = e.dataTransfer.getData('text/plain');
+                var targetZone = zone.dataset.zone;
+                if (!dragId) return;
+                var a = _getAssignments();
+                a[dragId] = targetZone;
+                _saveAssignments(a);
+                showStore();
+            });
+        });
 
-            // 拖拽事件
-            [installedZone, availableZone].forEach(function(zone) {
-                zone.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    zone.classList.add('drag-over');
-                });
-                zone.addEventListener('dragleave', function() {
-                    zone.classList.remove('drag-over');
-                });
-                zone.addEventListener('drop', function(e) {
-                    e.preventDefault();
-                    zone.classList.remove('drag-over');
-                    var id = e.dataTransfer.getData('text/plain');
-                    var targetZone = zone.dataset.zone;
-                    if (targetZone === 'installed') {
+        ov.querySelectorAll('.cos-bag-item').forEach(function(el) {
+            var id = el.dataset.id;
+            el.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/plain', id);
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            el.addEventListener('click', function(e) {
+                if (e.target.closest('.cos-bag-item')) {
+                    if (skills[id]) {
+                        _toggleDisabled(id);
+                    } else if (plugins[id]) {
                         installPlugin(id);
-                    } else {
-                        uninstallPlugin(id);
                     }
                     showStore();
-                });
+                }
             });
-
-            // 物品拖拽
-            document.querySelectorAll('.cos-bag-item').forEach(function(item) {
-                item.addEventListener('dragstart', function(e) {
-                    e.dataTransfer.setData('text/plain', item.dataset.id);
-                    e.dataTransfer.effectAllowed = 'move';
-                });
+            el.addEventListener('mouseenter', function(e) {
+                var s = skills[id] || plugins[id];
+                if (!s) return;
+                var disabled = _getDisabled().indexOf(id) !== -1;
+                var hint = disabled ? '<span style="color:#94a3b8;">（点击启用）</span>' :
+                    (skills[id] ? '<span style="color:#38bdf8;">（点击禁用）</span>' : '<span style="color:#38bdf8;">（点击安装）</span>');
+                tip.innerHTML = '<b>' + s.name + '</b>' + (s.description ? '<br>' + s.description : '') + '<br>' + hint;
+                tip.classList.add('visible');
             });
-
-            // 悬浮提示（先清理旧的）
-            var oldTip = document.querySelector('.cos-bag-tip');
-            if (oldTip) oldTip.remove();
-            var tip = document.createElement('div');
-            tip.className = 'cos-bag-tip';
-            document.body.appendChild(tip);
-
-            document.querySelectorAll('.cos-bag-item').forEach(function(item) {
-                item.addEventListener('mouseenter', function(e) {
-                    var id = item.dataset.id;
-                    var s = skills[id] || plugins[id];
-                    if (!s) return;
-                    tip.innerHTML = '<b>' + s.name + '</b>' +
-                        (s.description ? '<br>' + s.description : '');
-                    tip.classList.add('visible');
-                });
-                item.addEventListener('mousemove', function(e) {
-                    tip.style.left = (e.clientX + 12) + 'px';
-                    tip.style.top = (e.clientY + 12) + 'px';
-                });
-                item.addEventListener('mouseleave', function() {
-                    tip.classList.remove('visible');
-                });
+            el.addEventListener('mousemove', function(e) {
+                tip.style.left = (e.clientX + 12) + 'px';
+                tip.style.top = (e.clientY + 12) + 'px';
             });
+            el.addEventListener('mouseleave', function() {
+                tip.classList.remove('visible');
+            });
+        });
 
-            // 关闭时清理提示（关闭按钮、Esc、点击遮罩）
-            function cleanupTip() {
+        var closeBtn2 = ov.querySelector('.cos-overlay-close');
+        if (closeBtn2) {
+            closeBtn2.addEventListener('click', function cleanupTip() {
                 if (tip.parentNode) tip.parentNode.removeChild(tip);
-            }
-            var closeBtn = document.querySelector('.cos-overlay-close');
-            if (closeBtn) closeBtn.addEventListener('click', cleanupTip);
-            var overlay = document.querySelector('.cos-overlay');
-            if (overlay) {
-                overlay.addEventListener('click', function(e) {
-                    if (e.target === overlay) cleanupTip();
-                });
-            }
-            document.addEventListener('keydown', function esc(e) {
-                if (e.code === 'Escape') { cleanupTip(); document.removeEventListener('keydown', esc); }
             });
-        }, 50);
+        }
+        document.addEventListener('keydown', function esc(e) {
+            if (e.code === 'Escape') {
+                if (tip.parentNode) tip.parentNode.removeChild(tip);
+                document.removeEventListener('keydown', esc);
+            }
+        });
+        renderHotbar();
     }
 
     function unregister(id) {
@@ -375,24 +466,30 @@ var SkillSystem = (function() {
         // 移除已卸载的
         skillOrder = skillOrder.filter(function(id) { return skills[id]; });
 
-        // 按颜色分组
+        // 按区域颜色分组
         inner.innerHTML = '';
-        var groups = {};
+        var assignments = _getAssignments();
+        var disabled = _getDisabled();
+        var groups = { red: [], green: [], blue: [], _other: [], _disabled: [] };
+        var groupOrder = ['red', 'green', 'blue', '_other'];
         skillOrder.forEach(function(id) {
             if (!skills[id]) return;
-            var m = skills[id].icon && skills[id].icon.match(/color:#([a-f0-9]+)/i);
-            var color = m ? m[1] : 'default';
-            if (!groups[color]) groups[color] = [];
-            groups[color].push(id);
+            if (disabled.indexOf(id) !== -1) { groups._disabled.push(id); return; }
+            var zone = assignments[id];
+            if (zone && groups[zone]) groups[zone].push(id);
+            else groups._other.push(id);
         });
 
-        var colorKeys = Object.keys(groups);
-        colorKeys.forEach(function(color, gi) {
-            // 创建颜色组容器
+        // 正常区域
+        groupOrder.forEach(function(gk, gi) {
+            var ids = groups[gk];
+            if (!ids || ids.length === 0) return;
+            var zoneColor = _getZoneColor(gk);
+
             var groupEl = document.createElement('div');
             groupEl.className = 'cos-hotbar-group';
 
-            groups[color].forEach(function(id) {
+            ids.forEach(function(id) {
                 var skill = skills[id];
                 if (!skill) return;
                 var el = document.createElement('div');
@@ -400,13 +497,13 @@ var SkillSystem = (function() {
                 el.draggable = true;
                 el.dataset.skillId = id;
                 var num = (typeof PLUGIN_NUMBERS !== 'undefined' && PLUGIN_NUMBERS[id]) ? PLUGIN_NUMBERS[id] : '';
-                el.innerHTML = '<span class="cos-skill-icon">' + skill.icon + '</span><span class="cos-skill-label">' + skill.name + '</span>' +
+                var iconHtml = _getSkillIcon(skill, gk);
+                el.innerHTML = '<span class="cos-skill-icon">' + iconHtml + '</span><span class="cos-skill-label">' + skill.name + '</span>' +
                     (num ? '<span class="cos-skill-num">' + num + '</span>' : '');
                 el.addEventListener('click', function() {
                     if (activeSkill === id) deactivate();
                     else activate(id);
                 });
-                // 悬浮提示
                 el.addEventListener('mouseenter', function() {
                     tip.innerHTML = '<b>' + skill.name + '</b>' +
                         (skill.description ? '<br>' + skill.description : '');
@@ -421,7 +518,6 @@ var SkillSystem = (function() {
                 el.addEventListener('mouseleave', function() {
                     tip.classList.remove('visible');
                 });
-                // 拖拽排序（组内）
                 el.addEventListener('dragstart', function(e) {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', id);
@@ -456,11 +552,13 @@ var SkillSystem = (function() {
 
             inner.appendChild(groupEl);
 
-            // 颜色组之间加分隔线
-            if (gi < colorKeys.length - 1) {
-                var sep = document.createElement('div');
-                sep.className = 'cos-hotbar-sep';
-                inner.appendChild(sep);
+            if (gi < groupOrder.length - 1) {
+                var nextIds = groups[groupOrder[gi + 1]];
+                if (nextIds && nextIds.length > 0) {
+                    var sep = document.createElement('div');
+                    sep.className = 'cos-hotbar-sep';
+                    inner.appendChild(sep);
+                }
             }
         });
 

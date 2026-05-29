@@ -323,6 +323,7 @@ var TileReplaceSkill = {
             '<span style="color:#475569;">|</span>' +
             '<button class="tr-tb tn-select ac-select" style="btn">框选</button>' +
             '<button class="tr-tb tn-save disabled ac-select" style="opacity:0.4;" disabled>保存选区</button>' +
+            '<button class="tr-tb tn-godot" style="font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid rgba(52,211,153,0.2);background:rgba(52,211,153,0.08);color:#34d399;cursor:pointer;">Godot导出</button>' +
             '<button class="tr-tb tn-cloud-export" style="font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid rgba(56,189,248,0.2);background:rgba(56,189,248,0.08);color:#38bdf8;cursor:pointer;">盘导出</button>' +
             '<span style="color:#475569;">|</span>' +
             '<button class="tr-tb tn-clear ac-danger">清空</button>' +
@@ -511,6 +512,7 @@ var TileReplaceSkill = {
             exportBtn: ov.querySelector('.tr-export-btn'),
             cloudImport: ov.querySelector('.tr-cloud-import'),
             cloudExport: ov.querySelector('.tn-cloud-export'),
+            btnGodot: ov.querySelector('.tn-godot'),
             resetBtn: ov.querySelector('.tr-reset-btn'),
             clearTexBtn: ov.querySelector('.tr-clear-tex-btn')
         };
@@ -689,6 +691,11 @@ var TileReplaceSkill = {
                 CosCloudDrive.setOnSelect(null);
             });
             CosCloudDrive.open();
+        });
+
+        // Godot导出
+        el.btnGodot.addEventListener('click', function() {
+            self._exportGodot();
         });
 
         // 盘导出：导出当前框选区域到云盘（不下载）
@@ -2320,5 +2327,415 @@ var TileReplaceSkill = {
         }
 
         ctx.restore();
+    },
+
+    // ===== Godot 导出 =====
+
+    _exportGodot: function() {
+        var self = this;
+        var sceneName = prompt('场景名称:', this._curr().name || 'tilemap');
+        if (!sceneName) return;
+        sceneName = sceneName.replace(/[^a-zA-Z0-9_\u4e00-\u9fff]/g, '_') || 'tilemap';
+
+        // 收集当前层数据
+        var layer = this._curr();
+
+        // 导出 6 张贴图为 PNG（从 textureImages 或图集截取）
+        var keys = ['dot', 'triangle', 'diagonal', 'line', 'full', 'empty'];
+        var texFilenames = {
+            dot:'dot.png', triangle:'triangle.png', diagonal:'diagonal.png',
+            line:'line.png', full:'full.png', empty:'empty.png'
+        };
+        var textures = {};
+        keys.forEach(function(k) {
+            var img = null;
+            if (layer.textureMode === 'multi' && layer.textureImages[k] && layer.textureImages[k].image) {
+                img = layer.textureImages[k].image;
+            } else if (layer.textureMode === 'atlas' && layer.atlasImage && layer.atlasRegions[k]) {
+                var c = document.createElement('canvas');
+                var reg = layer.atlasRegions[k];
+                c.width = reg.w;
+                c.height = reg.h;
+                var cx = c.getContext('2d');
+                cx.imageSmoothingEnabled = false;
+                cx.drawImage(layer.atlasImage, reg.x, reg.y, reg.w, reg.h, 0, 0, reg.w, reg.h);
+                img = c;
+            }
+            if (!img) return;
+            var c = document.createElement('canvas');
+            c.width = img.width || 16;
+            c.height = img.height || 16;
+            var cx = c.getContext('2d');
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(img, 0, 0);
+            textures[k] = c.toDataURL('image/png');
+        });
+
+        // 检查有没有贴图
+        if (Object.keys(textures).length === 0) {
+            if (typeof showToast === 'function') showToast('没有贴图可导出，请先上传贴图');
+            return;
+        }
+
+        // 准备数据 JSON
+        var dataObj = {
+            grid_size: this._gridSize,
+            points: Object.keys(layer.points).filter(function(k) { return layer.points[k]; }),
+            empty_points: Object.keys(layer.emptyPoints).filter(function(k) { return layer.emptyPoints[k]; }),
+            base_directions: {
+                dot: layer.baseDirections.dot,
+                triangle: layer.baseDirections.triangle,
+                diagonal: layer.baseDirections.diagonal,
+                line: layer.baseDirections.line
+            },
+            texture_rotation: {
+                dot: layer.textureRotation.dot || 0,
+                triangle: layer.textureRotation.triangle || 0,
+                diagonal: layer.textureRotation.diagonal || 0,
+                line: layer.textureRotation.line || 0
+            }
+        };
+        var dataJSON = JSON.stringify(dataObj, null, 2);
+
+        // 生成 GD 脚本内容
+        var gdContent = _generateGD(sceneName);
+
+        // 生成 TSCN 内容
+        var tscnContent = _generateTSCN(sceneName, keys, texFilenames, textures);
+
+        // 打包 ZIP 下载
+        if (typeof JSZip === 'undefined') {
+            if (typeof showToast === 'function') showToast('需要 JSZip 库');
+            return;
+        }
+        var zip = new JSZip();
+        var folder = zip.folder(sceneName);
+
+        // 添加贴图
+        keys.forEach(function(k) {
+            if (textures[k]) {
+                var bin = atob(textures[k].split(',')[1]);
+                var buf = new Uint8Array(bin.length);
+                for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+                folder.file(texFilenames[k], buf);
+            }
+        });
+
+        // 添加数据 JSON
+        folder.file(sceneName + '_data.json', dataJSON);
+
+        // 添加 GD 脚本
+        folder.file(sceneName + '.gd', gdContent);
+
+        // 添加 TSCN 场景
+        folder.file(sceneName + '.tscn', tscnContent);
+
+        zip.generateAsync({ type: 'blob' }).then(function(blob) {
+            var link = document.createElement('a');
+            link.download = sceneName + '_godot.zip';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+            if (typeof showToast === 'function') showToast('已导出 Godot 场景');
+        });
     }
 };
+
+// ===== 辅助函数（生成 GD / TSCN 字符串） =====
+
+function _generateGD(name) {
+    return [
+        'extends Node2D',
+        '',
+        'var 格大小: int = 16',
+        '',
+        '@export var 显示网格: bool = false',
+        '@export var 空图: Texture2D',
+        '@export var 满图: Texture2D',
+        '@export var 点图: Texture2D',
+        '@export var 三角图: Texture2D',
+        '@export var 对角图: Texture2D',
+        '@export var 直线图: Texture2D',
+        '',
+        'var 所有点: Dictionary = {}',
+        'var 所有空点: Dictionary = {}',
+        'var 基准方向: Dictionary = {}',
+        'var 额外旋转: Dictionary = {}',
+        'var 鼠标按下: bool = false',
+        'var 删除模式: bool = false',
+        'var 上次交点: Vector2i = Vector2i(-99999, -99999)',
+        '',
+        'var _方向配置: Dictionary = {',
+        '\t"dot": { "order": ["tl","tr","br","bl"] },',
+        '\t"triangle": { "order": ["tl","tr","br","bl"] },',
+        '\t"line": { "order": ["top","right","bottom","left"] },',
+        '\t"diagonal": { "order": ["tlbr","trbl"] }',
+        '}',
+        '',
+        '',
+        'func _ready() -> void:',
+        '\t_加载数据()',
+        '\tqueue_redraw()',
+        '',
+        '',
+        'func _加载数据() -> void:',
+        '\tvar 路径: String = get_script().resource_path.replace(".gd", "_data.json")',
+        '\tif not FileAccess.file_exists(路径):',
+        '\t\treturn',
+        '\tvar 文件: FileAccess = FileAccess.open(路径, FileAccess.READ)',
+        '\tif 文件 == null:',
+        '\t\treturn',
+        '\tvar 文本: String = 文件.get_as_text()',
+        '\t文件.close()',
+        '\tvar 数据 = JSON.parse_string(文本)',
+        '\tif 数据 == null:',
+        '\t\treturn',
+        '\tif 数据.has("grid_size"):',
+        '\t\t格大小 = 数据.grid_size',
+        '\tif 数据.has("points"):',
+        '\t\tfor key in 数据.points:',
+        '\t\t\t所有点[key] = true',
+        '\tif 数据.has("empty_points"):',
+        '\t\tfor key in 数据.empty_points:',
+        '\t\t\t所有空点[key] = true',
+        '\tif 数据.has("base_directions"):',
+        '\t\t基准方向 = 数据.base_directions.duplicate()',
+        '\tif 数据.has("texture_rotation"):',
+        '\t\t额外旋转 = 数据.texture_rotation.duplicate()',
+        '',
+        '',
+        'func _unhandled_input(事件: InputEvent) -> void:',
+        '\tif 事件 is InputEventMouseButton and 事件.pressed:',
+        '\t\tif 事件.button_index == MOUSE_BUTTON_LEFT:',
+        '\t\t\t鼠标按下 = true',
+        '\t\t\t删除模式 = false',
+        '\t\t\t上次交点 = Vector2i(-99999, -99999)',
+        '\t\t\t点击交叉点(get_global_mouse_position())',
+        '\t\t\tget_viewport().set_input_as_handled()',
+        '\t\telif 事件.button_index == MOUSE_BUTTON_RIGHT:',
+        '\t\t\t鼠标按下 = true',
+        '\t\t\t删除模式 = true',
+        '\t\t\t上次交点 = Vector2i(-99999, -99999)',
+        '\t\t\t点击交叉点(get_global_mouse_position())',
+        '\t\t\tget_viewport().set_input_as_handled()',
+        '\telif 事件 is InputEventMouseButton and not 事件.pressed:',
+        '\t\t鼠标按下 = false',
+        '\telif 事件 is InputEventMouseMotion and 鼠标按下:',
+        '\t\t点击交叉点(get_global_mouse_position())',
+        '',
+        '',
+        'func 屏幕坐标转交叉点(坐标: Vector2) -> Vector2i:',
+        '\treturn Vector2i(int(round(坐标.x / 格大小)), int(round(坐标.y / 格大小)))',
+        '',
+        '',
+        'func 格子索引转屏幕坐标(索引: Vector2i) -> Vector2:',
+        '\treturn Vector2(索引.x * 格大小 + 格大小 / 2.0, 索引.y * 格大小 + 格大小 / 2.0)',
+        '',
+        '',
+        'func 点击交叉点(鼠标位置: Vector2) -> void:',
+        '\tvar 交点: Vector2i = 屏幕坐标转交叉点(鼠标位置)',
+        '\tif 交点 == 上次交点:',
+        '\t\treturn',
+        '\t上次交点 = 交点',
+        '\tvar key: String = str(交点.x) + "," + str(交点.y)',
+        '\tif 删除模式:',
+        '\t\t所有点.erase(key)',
+        '\t\t所有空点.erase(key)',
+        '\telse:',
+        '\t\t所有点[key] = true',
+        '\tqueue_redraw()',
+        '',
+        '',
+        'func 获取瓦片类型(tx: int, ty: int) -> Dictionary:',
+        '\tvar tl: bool = 所有点.has(str(tx) + "," + str(ty))',
+        '\tvar tr: bool = 所有点.has(str(tx + 1) + "," + str(ty))',
+        '\tvar bl: bool = 所有点.has(str(tx) + "," + str(ty + 1))',
+        '\tvar br: bool = 所有点.has(str(tx + 1) + "," + str(ty + 1))',
+        '\tvar count: int = (1 if tl else 0) + (1 if tr else 0) + (1 if bl else 0) + (1 if br else 0)',
+        '\tif count > 0:',
+        '\t\tvar bits: int = (1 if tl else 0) + (2 if tr else 0) + (4 if bl else 0) + (8 if br else 0)',
+        '\t\treturn { "count": count, "bits": bits, "tl": tl, "tr": tr, "bl": bl, "br": br }',
+        '\tif 所有空点.has(str(tx) + "," + str(ty)) or 所有空点.has(str(tx + 1) + "," + str(ty)) or 所有空点.has(str(tx) + "," + str(ty + 1)) or 所有空点.has(str(tx + 1) + "," + str(ty + 1)):',
+        '\t\treturn { "count": 0, "bits": 0, "tl": false, "tr": false, "bl": false, "br": false, "empty": true }',
+        '\treturn {}',
+        '',
+        '',
+        'func _draw() -> void:',
+        '\t# 收集所有需要绘制的格子',
+        '\tvar 瓦片集合: Dictionary = {}',
+        '\tfor key in 所有点:',
+        '\t\tvar parts: PackedStringArray = key.split(",")',
+        '\t\tif parts.size() != 2:',
+        '\t\t\tcontinue',
+        '\t\tvar cx: int = int(parts[0])',
+        '\t\tvar cy: int = int(parts[1])',
+        '\t\tvar 周围: Array[Vector2i] = [',
+        '\t\t\tVector2i(cx - 1, cy - 1),',
+        '\t\t\tVector2i(cx, cy - 1),',
+        '\t\t\tVector2i(cx - 1, cy),',
+        '\t\t\tVector2i(cx, cy)',
+        '\t\t]',
+        '\t\tfor tile in 周围:',
+        '\t\t\t瓦片集合[str(tile)] = tile',
+        '\tfor key in 所有空点:',
+        '\t\tvar parts: PackedStringArray = key.split(",")',
+        '\t\tif parts.size() != 2:',
+        '\t\t\tcontinue',
+        '\t\tvar cx: int = int(parts[0])',
+        '\t\tvar cy: int = int(parts[1])',
+        '\t\tvar 周围: Array[Vector2i] = [',
+        '\t\t\tVector2i(cx - 1, cy - 1),',
+        '\t\t\tVector2i(cx, cy - 1),',
+        '\t\t\tVector2i(cx - 1, cy),',
+        '\t\t\tVector2i(cx, cy)',
+        '\t\t]',
+        '\t\tfor tile in 周围:',
+        '\t\t\t瓦片集合[str(tile)] = tile',
+        '\tfor tile in 瓦片集合.values():',
+        '\t\t绘制一个瓦片(tile.x, tile.y)',
+        '\t# 网格线',
+        '\tif 显示网格:',
+        '\t\tvar 网格色: Color = Color(1, 0.86, 0.7, 0.08)',
+        '\t\tfor x in range(-2000, 2001, 格大小):',
+        '\t\t\tdraw_line(Vector2(x, -2000), Vector2(x, 2000), 网格色, 1.0)',
+        '\t\tfor y in range(-2000, 2001, 格大小):',
+        '\t\t\tdraw_line(Vector2(-2000, y), Vector2(2000, y), 网格色, 1.0)',
+        '\t# 标记点',
+        '\tif 显示网格:',
+        '\t\tvar pr: float = 4.0',
+        '\t\tfor key in 所有点:',
+        '\t\t\tvar parts: PackedStringArray = key.split(",")',
+        '\t\t\tif parts.size() != 2:',
+        '\t\t\t\tcontinue',
+        '\t\t\tdraw_circle(Vector2(int(parts[0]) * 格大小, int(parts[1]) * 格大小), pr, Color(0.22, 0.74, 0.97))',
+        '\t\tfor key in 所有空点:',
+        '\t\t\tvar parts: PackedStringArray = key.split(",")',
+        '\t\t\tif parts.size() != 2:',
+        '\t\t\t\tcontinue',
+        '\t\t\tdraw_circle(Vector2(int(parts[0]) * 格大小, int(parts[1]) * 格大小), pr, Color(0.58, 0.64, 0.72, 0.6))',
+        '\t\t\tdraw_arc(Vector2(int(parts[0]) * 格大小, int(parts[1]) * 格大小), pr, 0, TAU, 12, Color(0.58, 0.64, 0.72, 0.3), 1.0)',
+        '',
+        '',
+        'func 绘制一个瓦片(tx: int, ty: int) -> void:',
+        '\tvar info: Dictionary = 获取瓦片类型(tx, ty)',
+        '\tif info.is_empty():',
+        '\t\treturn',
+        '\tvar x0: float = tx * 格大小',
+        '\tvar y0: float = ty * 格大小',
+        '\tvar gs: float = 格大小',
+        '\t# 确定瓦片类型',
+        '\tvar texKey: String',
+        '\tif info.has("empty") and info.empty:',
+        '\t\ttexKey = "empty"',
+        '\telif info.count == 1:',
+        '\t\ttexKey = "dot"',
+        '\telif info.count == 2:',
+        '\t\tif info.bits in [3, 5, 10, 12]:',
+        '\t\t\ttexKey = "line"',
+        '\t\telse:',
+        '\t\t\ttexKey = "diagonal"',
+        '\telif info.count == 3:',
+        '\t\ttexKey = "triangle"',
+        '\telif info.count == 4:',
+        '\t\ttexKey = "full"',
+        '\telse:',
+        '\t\treturn',
+        '\tvar tex: Texture2D = _获取贴图(texKey)',
+        '\tif tex == null:',
+        '\t\treturn',
+        '\t# 计算旋转',
+        '\tvar rot: float = _计算旋转角度(texKey, info)',
+        '\t# 绘制',
+        '\tif rot != 0.0:',
+        '\t\tdraw_set_transform(Vector2(x0 + gs / 2, y0 + gs / 2), rot)',
+        '\t\tdraw_texture_rect(tex, Rect2(-gs / 2, -gs / 2, gs, gs), false)',
+        '\t\tdraw_set_transform(Vector2.ZERO, 0.0)',
+        '\telse:',
+        '\t\tdraw_texture_rect(tex, Rect2(x0, y0, gs, gs), false)',
+        '',
+        '',
+        'func _获取贴图(texKey: String) -> Texture2D:',
+        '\tmatch texKey:',
+        '\t\t"dot": return 点图',
+        '\t\t"triangle": return 三角图',
+        '\t\t"diagonal": return 对角图',
+        '\t\t"line": return 直线图',
+        '\t\t"full": return 满图',
+        '\t\t"empty": return 空图',
+        '\treturn null',
+        '',
+        '',
+        'func _计算旋转角度(texKey: String, info: Dictionary) -> float:',
+        '\tif not 基准方向.has(texKey):',
+        '\t\treturn 0.0',
+        '\tvar baseDir: String = 基准方向[texKey]',
+        '\tvar markDir: String = ""',
+        '\tif info.count == 1:',
+        '\t\tif info.tl: markDir = "tl"',
+        '\t\telif info.tr: markDir = "tr"',
+        '\t\telif info.br: markDir = "br"',
+        '\t\telif info.bl: markDir = "bl"',
+        '\telif info.count == 2:',
+        '\t\tif info.bits == 3: markDir = "top"',
+        '\t\telif info.bits == 12: markDir = "bottom"',
+        '\t\telif info.bits == 5: markDir = "left"',
+        '\t\telif info.bits == 10: markDir = "right"',
+        '\t\telif info.bits == 9: markDir = "tlbr"',
+        '\t\telif info.bits == 6: markDir = "trbl"',
+        '\telif info.count == 3:',
+        '\t\tif not info.tl: markDir = "tl"',
+        '\t\telif not info.tr: markDir = "tr"',
+        '\t\telif not info.bl: markDir = "bl"',
+        '\t\telif not info.br: markDir = "br"',
+        '\tif markDir.is_empty():',
+        '\t\treturn 0.0',
+        '\tvar 配置: Dictionary = _方向配置.get(texKey, {})',
+        '\tif 配置.is_empty():',
+        '\t\treturn 0.0',
+        '\tvar order: Array = 配置["order"]',
+        '\tvar idxBase: int = order.find(baseDir)',
+        '\tvar idxMark: int = order.find(markDir)',
+        '\tif idxBase < 0 or idxMark < 0:',
+        '\t\treturn 0.0',
+        '\tvar extra: int = 额外旋转.get(texKey, 0)',
+        '\tvar diff: int = (idxMark - idxBase + order.size() + extra) % order.size()',
+        '\treturn diff * PI / 2.0'
+    ].join('\n');
+}
+
+function _generateTSCN(name, keys, texFilenames, textures) {
+    // 计算 ext_resource ID：贴图 1-6，脚本 7
+    var texKeys = ['dot', 'triangle', 'diagonal', 'line', 'full', 'empty'];
+    var texIdMap = {};
+    texKeys.forEach(function(k, i) {
+        if (textures[k]) texIdMap[k] = i + 1;
+    });
+    var scriptId = 7;
+
+    var lines = [];
+    lines.push('[gd_scene format=3]');
+    lines.push('');
+
+    // ext_resource 贴图
+    texKeys.forEach(function(k) {
+        if (texIdMap[k]) {
+            lines.push('[ext_resource type="Texture2D" path="res://' + name + '/' + texFilenames[k] + '" id="' + texIdMap[k] + '"]');
+        }
+    });
+    lines.push('[ext_resource type="Script" path="res://' + name + '/' + name + '.gd" id="' + scriptId + '"]');
+    lines.push('');
+
+    // 节点
+    lines.push('[node name="' + name + '" type="Node2D"]');
+    lines.push('script = ExtResource("' + scriptId + '")');
+    // 贴图属性赋值（跟 GD 脚本的 @export var 对应）
+    var gdTexNames = {dot:'点图', triangle:'三角图', diagonal:'对角图', line:'直线图', full:'满图', empty:'空图'};
+    texKeys.forEach(function(k) {
+        if (texIdMap[k]) {
+            lines.push('"' + gdTexNames[k] + '" = ExtResource("' + texIdMap[k] + '")');
+        }
+    });
+    lines.push('');
+
+    return lines.join('\n');
+}

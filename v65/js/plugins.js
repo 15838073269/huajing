@@ -39,8 +39,7 @@ var PLUGIN_LIST = [
     // === 叠图 ===
     'js/skills/tile-replace.js',  // 🧩 叠图替换 - Marching Squares 自动瓦片
 
-    // === 字体 ===
-    // 'js/skills/font-craft.js',        // 字体工坊 - 已隐藏
+    // === 字体（已删除） ===
 
     // === AI ===
     'js/skills/ai-image-gen.js',  // 🎨 AI生图 - AI图片生成（DOM版）
@@ -48,6 +47,9 @@ var PLUGIN_LIST = [
 
     // === 引擎 ===
     // 'js/skills/game-loop.js',   // ▶ 游戏循环 - 演示独立 game loop 驱动的迷你游戏
+
+    // === 音频 ===
+    'js/skills/synth-sfx.js',   // ≈ 音效合成 - 数学波形合成+20+游戏音效预设+WAV导出
 
     // === AI 协作 ===
     // 'js/skills/gui.js',     // 规 - Game Dev Agent Cluster（多AI角色协作+文档+生图）
@@ -75,8 +77,9 @@ var PLUGIN_NUMBERS = {
     'nine-slice': 17,
     'tile-replace': 18,
     'ai-image-gen': 19,
-    // 'ui-debugger': 20,
-    // 'game-loop': 21,
-    // 'gui': 22,
+    'synth-sfx': 20,
+    // 'ui-debugger': 21,
+    // 'game-loop': 22,
+    // 'gui': 23,
     // 'font-craft': 20
 };
