@@ -472,6 +472,10 @@ var AIImageGenSkill = {
             {v:'1024x1536',l:'竖版'},
             {v:'2048x2048',l:'2K正方形'},
             {v:'2048x1152',l:'2K横版'},
+            {v:'2688x1152',l:'2K 21:9'},
+            {v:'1152x2688',l:'2K 9:21'},
+            {v:'3360x1440',l:'4K 21:9'},
+            {v:'1440x3360',l:'4K 9:21'},
             {v:'3840x2160',l:'4K横版'},
             {v:'2160x3840',l:'4K竖版'}
         ];
@@ -816,8 +820,8 @@ var AIImageGenSkill = {
                 formData.append('model', nd.model || 'gpt-image-2');
                 formData.append('n', String(nd.numImages || 1));
                 formData.append('size', nd.size || '1024x1024');
-                var qMap2 = {low:'standard', medium:'standard', high:'hd', auto:''};
-                var qv2 = qMap2[nd.quality] || 'standard';
+                // quality 直接传递原始值（API支持: low, medium, high, auto）
+                var qv2 = nd.quality || 'auto';
                 if (qv2) formData.append('quality', qv2);
 
                 resp = await fetch('https://api3.wlai.vip/v1/images/edits', {
@@ -833,9 +837,8 @@ var AIImageGenSkill = {
                     n: nd.numImages || 1,
                     size: nd.size || '1024x1024'
                 };
-                // quality 映射为 API 兼容值
-                var qMap = {low:'standard', medium:'standard', high:'hd', auto:''};
-                var qv = qMap[nd.quality] || '';
+                // quality 直接传递原始值（API支持: low, medium, high, auto）
+                var qv = nd.quality || 'auto';
                 if (qv) bodyObj.quality = qv;
 
                 resp = await fetch('https://api3.wlai.vip/v1/images/generations', {
