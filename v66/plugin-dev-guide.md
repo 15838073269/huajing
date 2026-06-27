@@ -1,0 +1,524 @@
+# 画境 v66 插件开发指南
+
+## 一、插件基本结构
+
+每个插件是一个 JS 文件，放在 `js/skills/` 目录下，导出一个全局对象。
+
+### 最小模板
+
+```javascript
+var MyPlugin = {
+    // ===== 必填字段 =====
+    id: 'my-plugin',          // 唯一标识（英文，kebab-case）
+    name: '我的插件',          // 显示名称
+    icon: '插',               // 底部栏图标（1-2个汉字）
+    // key: '5',              // 可选：快捷键
+
+    // ===== 生命周期（至少实现 activate） =====
+    activate: function(world) { /* 激活时调用 */ },
+    deactivate: function() { /* 切换走时调用 */ },
+
+    // ===== 可选 =====
+    getSubTools: function() { return []; },  // 子工具栏按钮
+    save: function() { return {}; },          // 保存状态
+    load: function(data) {}                   // 恢复状态
+};
+```
+
+### 注册流程
+
+```
+1. 插件文件放在 js/skills/ 目录
+2. 在 js/plugins.js 的 PLUGIN_LIST 中添加路径
+3. PluginLoader.autoRegister() 自动检测全局变量并注册
+4. 检测条件: obj.id && obj.name && obj.icon && typeof obj.activate === 'function'
+```
+
+---
+
+## 二、生命周期详解
+
+### activate(world)
+
+用户点击底部栏图标时调用，`world` 是 `GameWorld` 对象。
+
+```javascript
+activate: function(world) {
+    this._world = world;
+
+    // ✅ 正确：检查是否已创建，避免重复初始化
+    if (this._overlay) {
+        SkillSystem.renderSubTools();
+        return;
+    }
+
+    this._createOverlay();
+    SkillSystem.renderSubTools();
+}
+```
+
+### deactivate()
+
+切换到其他插件时调用。
+
+```javascript
+deactivate: function() {
+    // ✅ 多窗口模式：什么都不做，窗口保持打开
+},
+
+deactivate: function() {
+    // ✅ 需要清理时：只解绑事件，不删除 DOM
+    this._unbindEvents();
+    this._isDrawing = false;
+}
+```
+
+### _destroy()（自定义方法）
+
+用户点击窗口"关"按钮时调用，彻底销毁。
+
+```javascript
+_destroy: function() {
+    // 1. 清理事件
+    document.removeEventListener('mousemove', this._onMove);
+    // 2. 清理定时器
+    if (this._timer) clearInterval(this._timer);
+    // 3. 移除 DOM
+    if (this._overlay && this._overlay.parentNode) {
+        this._overlay.parentNode.removeChild(this._overlay);
+    }
+    this._overlay = null;
+    // 4. 重置状态
+    this._data = [];
+}
+```
+
+---
+
+## 三、窗口类型与规范
+
+### 类型 A：fixed 独立窗口（推荐）
+
+适用于有复杂 UI 的插件（裁剪、像素画、视频抽帧等）。
+
+所有独立窗口**必须**支持：
+1. **标题栏拖拽移动**
+2. **四角四边拖拽缩放**（使用 `WindowHelper.makeResizable`）
+
+```javascript
+_createOverlay: function() {
+    var self = this;
+    var ov = document.createElement('div');
+    ov.className = 'my-overlay';
+    ov.setAttribute('data-skill-id', this.id);  // ← 必须！点击自动切回插件
+    ov.style.cssText = 'position:fixed;z-index:9999;' +
+        'background:#0f1525;color:#e8edf5;border-radius:12px;' +
+        'border:1px solid rgba(100,160,255,0.15);' +
+        'box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden;' +
+        'display:flex;flex-direction:column;font-size:13px;' +
+        'min-width:400px;min-height:300px;' +
+        'left:40px;top:40px;';
+    ov.innerHTML =
+        '<div class="my-header" style="display:flex;align-items:center;' +
+        'justify-content:space-between;padding:8px 14px;cursor:move;user-select:none;flex-shrink:0;">' +
+        '<span style="font-weight:600;color:#38bdf8;">我的插件</span>' +
+        '<span class="my-close" style="cursor:pointer;color:#94a3b8;padding:2px 6px;">×</span></div>' +
+        '<div class="my-body" style="flex:1;overflow:auto;padding:10px 14px;"></div>';
+    document.body.appendChild(ov);
+    this._overlay = ov;
+
+    // 四角四边缩放 + localStorage 记忆尺寸
+    if (typeof WindowHelper !== 'undefined') {
+        WindowHelper.makeResizable(ov, { minWidth: 400, minHeight: 300, storeKey: 'my-window-rect' });
+    }
+
+    // 标题栏拖拽
+    var d = { active: false, sx: 0, sy: 0, ox: 0, oy: 0 };
+    ov.querySelector('.my-header').addEventListener('mousedown', function(e) {
+        if (e.target.closest('.my-close')) return;
+        d.active = true;
+        d.sx = e.clientX; d.sy = e.clientY;
+        var r = ov.getBoundingClientRect();
+        d.ox = r.left; d.oy = r.top;
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+        if (!d.active) return;
+        ov.style.left = (d.ox + e.clientX - d.sx) + 'px';
+        ov.style.top = (d.oy + e.clientY - d.sy) + 'px';
+    });
+    document.addEventListener('mouseup', function() { d.active = false; });
+}
+```
+
+**必须遵守**：
+- `position:fixed`，不遮挡画布
+- `data-skill-id` 属性（点击窗口自动切回对应插件）
+- `z-index:9999`
+- **可拖拽移动**（标题栏 mousedown + document mousemove）
+- **四角四边可缩放**（调用 `WindowHelper.makeResizable`）
+- **禁用右键菜单**（`ov.addEventListener('contextmenu', function(e) { e.preventDefault(); })`）
+- 深色主题配色
+- `deactivate` 不隐藏窗口
+- 关闭按钮调 `_destroy()` + `SkillSystem.deactivate()`
+
+### 类型 B：世界层元素
+
+适用于在世界画布上操作的插件（节点编辑、音乐播放器等）。
+
+```javascript
+activate: function(world) {
+    this._world = world;
+    var layer = world.getLayer();
+    var el = document.createElement('div');
+    el.setAttribute('data-skill-id', this.id);  // ← 必须
+    el.style.cssText = 'position:absolute;left:100px;top:100px;';
+    layer.appendChild(el);
+}
+```
+
+### 类型 C：全屏覆盖层（特殊）
+
+适用于绘画等需要拦截所有输入的插件。
+
+```javascript
+// SVG 放在 document.body，position:fixed，z-index:10001
+// pointer-events:none，不阻挡其他 UI
+```
+
+---
+
+## 四、窗口拖拽（类型 A 必备）
+
+```javascript
+// 在 _bindEvents 中
+var header = ov.querySelector('.my-header');
+var dragging = false, startX, startY, startLeft, startTop;
+
+header.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.my-close-btn')) return; // 关闭按钮不触发
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = ov.offsetLeft;
+    startTop = ov.offsetTop;
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    ov.style.left = (startLeft + e.clientX - startX) + 'px';
+    ov.style.top = (startTop + e.clientY - startY) + 'px';
+});
+
+document.addEventListener('mouseup', function() {
+    dragging = false;
+});
+```
+
+**CSS**：标题栏加 `cursor:move;user-select:none;`
+
+---
+
+## 五、子工具栏
+
+```javascript
+getSubTools: function() {
+    var self = this;
+    return [
+        { label: '操作A', action: function() { self._doA(); } },
+        { label: '操作B', title: '提示文字', action: function() { self._doB(); } },
+        // 自定义 HTML（如颜色选择器、滑块）
+        { html: '<input type="color" id="my-color" value="#ff0000">' },
+        { html: '<input type="range" min="1" max="99" value="5" id="my-slider">' }
+    ];
+}
+```
+
+**注意**：
+- `renderSubTools()` 会重建 DOM，旧的 input 事件监听器会丢失
+- **解决方案**：用 document 级别事件委托监听 input 变化
+- `action` 在按钮点击后执行，然后自动调 `renderSubTools()`
+
+---
+
+## 六、事件绑定规范
+
+### 事件委托（推荐）
+
+```javascript
+// 颜色/滑块等动态元素，用事件委托
+this._onDelegate = function(e) {
+    if (e.target.id === 'my-color') self._color = e.target.value;
+    if (e.target.id === 'my-slider') self._size = parseInt(e.target.value);
+};
+document.addEventListener('input', this._onDelegate, true);
+```
+
+### document 级别事件
+
+```javascript
+// 必须在 _unbindEvents 中清理
+document.addEventListener('mousemove', this._onMove);
+document.addEventListener('mouseup', this._onUp);
+```
+
+### 世界层事件
+
+```javascript
+// 通过 GameWorld 事件系统
+this._world.on('mousedown', function(e) { ... });
+// 注意：world.on 的事件无法解绑，慎用
+```
+
+### 清理模板
+
+```javascript
+_unbindEvents: function() {
+    if (this._onMove) document.removeEventListener('mousemove', this._onMove);
+    if (this._onUp) document.removeEventListener('mouseup', this._onUp);
+    if (this._onDelegate) document.removeEventListener('input', this._onDelegate, true);
+    if (this._observer) { this._observer.disconnect(); this._observer = null; }
+}
+```
+
+---
+
+## 七、状态保存与恢复
+
+```javascript
+save: function() {
+    return {
+        data: this._data,
+        settings: this._settings
+    };
+},
+
+load: function(data) {
+    if (data.data) this._data = data.data;
+    if (data.settings) this._settings = data.settings;
+}
+```
+
+保存时机：每 30 秒自动保存 + 页面关闭前保存（main.js `autoSave`）。
+存储位置：IndexedDB（通过 GameStorage）。
+
+---
+
+## 八、UI 配色规范（深色主题）
+
+| 用途 | 颜色 |
+|---|---|
+| 面板背景 | `#0f3460` |
+| 侧边栏/标题栏 | `#16213e` |
+| 强调色/选中 | `#e94560` |
+| 主文字 | `#eee` |
+| 次要文字 | `#aaa` / `#bbb` |
+| 暗淡文字 | `#666` |
+| 边框 | `#333` / `#444` |
+| 按钮悬浮 | `rgba(255,255,255,0.06)` |
+| 按钮禁用 | `opacity: 0.35` |
+| 进度条/渐变 | `linear-gradient(90deg, #e94560, #ff6b9d)` |
+| 按钮关闭 | `rgba(220,80,60,0.2)` 边框 `rgba(220,80,60,0.3)` 文字 `#e87060` |
+
+**禁止**：使用 `var(--cos-xxx)` CSS 变量（不是所有插件都加载了这些变量），直接用颜色值。
+
+---
+
+## 九、CSS 样式规范
+
+### 推荐方式：IIFE 注入 style 标签
+
+```javascript
+(function() {
+    var s = document.createElement('style');
+    s.textContent =
+        '.my-overlay { ... }' +
+        '.my-header { ... }' +
+        '.my-btn { ... }';
+    document.head.appendChild(s);
+})();
+```
+
+**优点**：样式集中管理，不污染内联样式，只注入一次。
+
+### 禁止
+
+- ❌ 使用 `var(--cos-xxx)` CSS 变量
+- ❌ 使用 emoji 作为图标或按钮文字
+- ❌ 使用白色/浅色背景
+
+---
+
+## 十、绘画模式特殊处理
+
+绘画（drawing）是特殊插件，激活期间：
+1. **不允许自动切换**：点击其他插件窗口不会切换走（skills.js 中 `activeSkill === 'drawing'` 时 return）
+2. **世界层 mousedown 被 stopPropagation**：阻止画布平移
+3. **SVG 画布 z-index:10001**：在所有插件窗口之上
+4. **只能通过底部栏点击"绘"退出**
+
+如果你的插件需要与绘画共存，注意：
+- deactivate 不要删除绘画相关的 DOM
+- 窗口 z-index 不要超过 10001
+
+---
+
+## 十一、data-skill-id 规范
+
+**有独立窗口的插件必须设置 `data-skill-id`**：
+
+```javascript
+ov.setAttribute('data-skill-id', this.id);
+```
+
+作用：点击窗口时自动切换回对应插件（skills.js 捕获阶段监听）。
+
+**不适用**：无窗口的插件（如绘画）、世界层元素插件（如音乐）。
+
+---
+
+## 十二、闭包陷阱
+
+### ❌ 错误：for 循环中的 var
+
+```javascript
+for (var i = 0; i < n; i++) {
+    el.addEventListener('click', function() {
+        self._doSomething(i);  // i 永远等于 n
+    });
+}
+```
+
+### ✅ 正确：IIFE 捕获
+
+```javascript
+for (var i = 0; i < n; i++) {
+    el.addEventListener('click', (function(idx) {
+        return function() { self._doSomething(idx); };
+    })(i));
+}
+```
+
+---
+
+## 十三、SkillSystem API 速查
+
+```javascript
+SkillSystem.register(skill)          // 注册插件
+SkillSystem.activate(skillId)        // 激活插件
+SkillSystem.deactivate()             // 停用当前插件
+SkillSystem.getActiveId()            // 获取当前激活插件 ID
+SkillSystem.getAll()                 // 获取所有已安装插件
+SkillSystem.renderSubTools()         // 刷新子工具栏
+SkillSystem.getSkillOrder()          // 获取排列顺序
+SkillSystem.setSkillOrder(order)     // 设置排列顺序
+SkillSystem.getPlugins()             // 获取商店插件
+SkillSystem.showStore()              // 显示包裹面板
+```
+
+### GameWorld API 速查
+
+```javascript
+world.getLayer()                     // 获取世界层 DOM
+world.screenToWorld(sx, sy)          // 屏幕坐标 → 世界坐标
+world.on(event, callback)            // 监听世界事件
+world.emit(event, data)              // 触发世界事件
+world.getState()                     // 获取世界状态
+world.setState(state)                // 恢复世界状态
+world.fitContent()                   // 适配内容
+world.resetView()                    // 重置视图
+```
+
+---
+
+## 十四、文件命名与目录
+
+```
+v66/
+├── js/
+│   ├── skills/           ← 插件目录
+│   │   ├── plugin-template.js   模板插件（参考）
+│   │   ├── drawing.js           画板
+│   │   ├── image-crop.js        图片裁剪
+│   │   ├── mp42sprites.js       视频序列帧
+│   │   └── ...                  其他插件
+│   ├── core/
+│   │   ├── skills.js            技能系统核心
+│   │   ├── plugin-loader.js     插件加载器
+│   │   ├── world.js             世界层
+│   │   └── storage.js           存储系统
+│   ├── plugins.js               插件清单（PLUGIN_LIST）
+│   └── main.js                  启动入口
+├── css/
+│   └── style.css                全局样式
+└── index.html
+```
+
+### 新建插件步骤
+
+1. 复制 `plugin-template.js` 为 `js/skills/my-plugin.js`
+2. 修改 id、name、icon、实现功能
+3. 在 `js/plugins.js` 的 `PLUGIN_LIST` 中添加 `'js/skills/my-plugin.js'`
+4. 刷新页面，在"包裹"中安装
+
+---
+
+## 十五、多语言 / TEXTS 外部化约定
+
+所有用户可见的文本（按钮、标签、提示、消息）必须集中定义在插件对象的 `TEXTS` 属性中，不允许硬编码在 HTML 或逻辑代码里。
+
+### 结构
+
+```javascript
+var MyPlugin = {
+    id: 'my-plugin',
+    name: '我的插件',
+    icon: '插',
+
+    TEXTS: {
+        TITLE: '我的插件',
+        BTN_SUBMIT: '提交',
+        BTN_CANCEL: '取消',
+        MSG_LOADING: '加载中...',
+        MSG_ERROR: '出错了: {0}',  // {0} {1} 为运行时替换占位符
+    },
+
+    activate: function(world) {
+        // ...
+    }
+};
+```
+
+### 使用方式
+
+直接通过 `this.TEXTS.KEY` 引用：
+
+```javascript
+_createOverlay: function() {
+    ov.innerHTML =
+        '<div class="my-header">' +
+            '<span>' + this.TEXTS.TITLE + '</span>' +
+            '<span>' + this.TEXTS.BTN_SUBMIT + '</span>' +
+        '</div>' +
+        '<div class="my-body"></div>';
+}
+```
+
+带参数的文本使用自制的 `_fmt` 方法：
+
+```javascript
+_fmt: function(str, a, b) {
+    return str.replace('{0}', a).replace('{1}', b);
+},
+// 用法：this._fmt(this.TEXTS.MSG_ERROR, errMsg)
+```
+
+### 规则
+
+1. **TEXTS 只包含用户可见文本** — 不包含 CSS 类名、HTML 结构、配置常量
+2. **TEXTS 键名全大写 + 下划线**，按语义分组加前缀（`BTN_`, `MSG_`, `LABEL_`, `TAB_`, `TOOLTIP_`）
+3. **内联拼接字符串**优先（`'<span>' + this.TEXTS.FOO + '</span>'`），不使用模板字符串以保持 ES5 兼容
+4. **新增文本**直接添加键值对，不修改已有键名
+5. **不允许**在 HTML 模板中硬写中文/英文文本（除极少数调试用临时文字）
+6. **百分比/符号等非文本字符**（如 `%`, `×`, 箭头符号）如果只是 UI 装饰而非语义文本，可以不进 TEXTS

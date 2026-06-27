@@ -1,0 +1,941 @@
+/* ============================================
+   画境 v66 - 玻璃拟态 + 游戏化反馈
+   冷蓝暗色调、毛玻璃、弹性动画、游戏HUD布局
+   ============================================ */
+
+:root {
+    /* 玻璃拟态冷色调色板 */
+    --cos-bg: #0a0e1a;
+    --cos-world: #0f1525;
+    --cos-surface: rgba(20, 30, 60, 0.65);
+    --cos-surface-warm: rgba(30, 45, 80, 0.7);
+    --cos-surface-hover: rgba(30, 45, 80, 0.75);
+    --cos-border: rgba(100, 160, 255, 0.12);
+    --cos-border-warm: rgba(100, 180, 255, 0.3);
+    --cos-text: #e8edf5;
+    --cos-text-soft: #94a3b8;
+    --cos-text-dim: #475569;
+    --cos-accent: #38bdf8;
+    --cos-accent-glow: rgba(56, 189, 248, 0.3);
+    --cos-accent-soft: rgba(56, 189, 248, 0.1);
+    --cos-blue: #60a5fa;
+    --cos-green: #34d399;
+    --cos-pink: #f472b6;
+    --cos-purple: #a78bfa;
+    --cos-red: #f87171;
+    --cos-yellow: #fbbf24;
+    --cos-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 1px rgba(100,160,255,0.1);
+    --cos-shadow-warm: 0 4px 20px rgba(56,189,248,0.15);
+    --cos-radius: 16px;
+    --cos-radius-sm: 12px;
+    --cos-radius-xs: 8px;
+    --cos-font: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --cos-font-mono: "Cascadia Code", "Fira Code", Consolas, monospace;
+    --cos-blur: blur(24px) saturate(180%);
+    --cos-hotbar-h: 64px;
+    --cos-hud-h: 48px;
+}
+
+/* ============================================
+   动画关键帧
+   ============================================ */
+@keyframes cos-pulse {
+    0%, 100% {
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.2), inset 0 0 6px rgba(56, 189, 248, 0.05);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.45), inset 0 0 12px rgba(56, 189, 248, 0.12);
+    }
+}
+
+@keyframes cos-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes cos-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+*, *::before, *::after {
+    margin: 0; padding: 0; box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+}
+input, textarea, [contenteditable] {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: var(--cos-font);
+    font-size: 13px;
+    color: var(--cos-text);
+    background: var(--cos-bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   游戏世界（画布）
+   ============================================ */
+#cos-world {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    bottom: var(--cos-hotbar-h);
+    overflow: hidden;
+    background: var(--cos-world);
+    cursor: default;
+}
+
+.cos-grid-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.cos-world-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 0; height: 0;
+    transform-origin: 0 0;
+    z-index: 1;
+}
+
+/* ============================================
+   HUD 顶部（极简信息）
+   ============================================ */
+.cos-hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--cos-hud-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 9000;
+    pointer-events: none;
+    font-size: 11px;
+    color: var(--cos-text-dim);
+}
+
+.cos-hud > * {
+    pointer-events: auto;
+}
+
+.cos-hud-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cos-hud-brand {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cos-accent);
+    text-shadow: 0 0 12px var(--cos-accent-glow);
+    letter-spacing: 0.5px;
+}
+
+.cos-hud-coords {
+    font-family: var(--cos-font-mono);
+    font-size: 10px;
+    color: var(--cos-text-dim);
+    opacity: 0.7;
+}
+
+.cos-hud-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cos-hud-btn {
+    width: 26px; height: 26px;
+    border: none;
+    border-radius: var(--cos-radius-xs);
+    background: var(--cos-surface);
+    color: var(--cos-text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid var(--cos-border);
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+}
+
+.cos-hud-btn:hover {
+    background: var(--cos-surface-hover);
+    color: var(--cos-text);
+    border-color: var(--cos-border-warm);
+    transform: translateY(-3px);
+    box-shadow: var(--cos-shadow-warm);
+}
+
+.cos-hud-btn:active {
+    transform: scale(0.92);
+    filter: brightness(1.2);
+    transition-duration: 0.08s;
+}
+
+/* ============================================
+   技能栏（Hotbar）- 底部居中
+   ============================================ */
+.cos-hotbar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--cos-hotbar-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 9000;
+    padding: 0 20px;
+}
+
+.cos-hotbar-inner {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    background: rgba(15, 21, 37, 0.75);
+    border: 1px solid rgba(100, 160, 255, 0.12);
+    border-radius: 16px;
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(100,160,255,0.06);
+}
+
+.cos-skill {
+    width: 46px; height: 46px;
+    border-radius: var(--cos-radius-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: rgba(255,255,255,0.03);
+    border: 1.5px solid transparent;
+}
+.cos-skill-icon {
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+}
+.cos-skill-label {
+    font-size: 8px;
+    color: var(--cos-text-dim);
+    margin-top: 2px;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.cos-skill[data-skill-id="tile-tool"] .cos-skill-icon,
+.cos-skill[data-skill-id="pixel-paint"] .cos-skill-icon,
+.cos-skill[data-skill-id="nine-slice"] .cos-skill-icon,
+.cos-bag-item[data-id="tile-tool"] .cos-bag-icon,
+.cos-bag-item[data-id="pixel-paint"] .cos-bag-icon,
+.cos-bag-item[data-id="nine-slice"] .cos-bag-icon {
+    color: #e94560;
+}
+
+.cos-skill:hover {
+    transform: translateY(-4px) scale(1.1);
+    background: rgba(255,255,255,0.06);
+    border-color: var(--cos-border-warm);
+    box-shadow: var(--cos-shadow-warm);
+}
+
+.cos-skill:active {
+    transform: translateY(-2px) scale(0.92);
+    filter: brightness(1.3);
+    transition-duration: 0.08s;
+}
+
+.cos-skill.cos-skill-dragging {
+    opacity: 0.4;
+    transform: scale(0.9) rotate(5deg);
+}
+
+.cos-skill.cos-skill-drag-over {
+    border-color: var(--cos-accent);
+    background: rgba(56,189,248,0.15);
+    transform: translateY(-4px) scale(1.1);
+    box-shadow: 0 0 20px var(--cos-accent-glow);
+}
+
+.cos-skill.cos-skill-active {
+    background: var(--cos-accent-soft);
+    border-color: var(--cos-accent);
+    animation: cos-pulse 2s ease-in-out infinite;
+}
+
+.cos-skill .cos-skill-key {
+    position: absolute;
+    bottom: 2px; right: 3px;
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--cos-text-dim);
+    opacity: 0.5;
+    font-family: var(--cos-font-mono);
+}
+
+/* 商店按钮始终可见 - 用品牌色强调 */
+.cos-skill-store {
+    background: linear-gradient(135deg, rgba(56,189,248,0.25) 0%, rgba(56,189,248,0.12) 100%);
+    border: 2px solid rgba(56,189,248,0.5);
+    box-shadow: 0 0 12px rgba(56,189,248,0.2), inset 0 0 8px rgba(56,189,248,0.08);
+}
+
+.cos-skill-store:hover {
+    background: linear-gradient(135deg, rgba(56,189,248,0.35) 0%, rgba(56,189,248,0.2) 100%);
+    border-color: var(--cos-accent);
+    box-shadow: 0 0 24px var(--cos-accent-glow), inset 0 0 12px rgba(56,189,248,0.12);
+    transform: translateY(-4px) scale(1.1);
+}
+
+.cos-skill-store span:first-child {
+    font-size: 26px;
+    filter: brightness(1.3) drop-shadow(0 0 4px rgba(56,189,248,0.4));
+}
+
+.cos-skill .cos-skill-tooltip {
+    position: absolute;
+    bottom: 54px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    padding: 4px 10px;
+    background: rgba(10, 14, 26, 0.9);
+    color: var(--cos-text);
+    font-size: 11px;
+    border-radius: var(--cos-radius-xs);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid var(--cos-border);
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+}
+
+.cos-skill:hover .cos-skill-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+.cos-hotbar-sep {
+    width: 1px;
+    height: 32px;
+    background: var(--cos-border);
+    margin: 0 3px;
+}
+
+.cos-hotbar-group {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.02);
+    border-radius: 8px;
+    padding: 0 2px;
+    margin: 0 1px;
+}
+
+/* 当前技能名称 */
+.cos-skill-name {
+    font-size: 11px;
+    color: var(--cos-accent);
+    margin-left: 8px;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+/* ============================================
+   子工具栏（当前技能的工具）
+   ============================================ */
+.cos-subtools {
+    position: fixed;
+    top: var(--cos-hud-h);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    border-top: none;
+    border-radius: 0 0 var(--cos-radius-sm) var(--cos-radius-sm);
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+    z-index: 8999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(100,160,255,0.06);
+}
+
+.cos-subtools.cos-subtools-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.cos-subtool-btn {
+    padding: 4px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--cos-radius-xs);
+    background: transparent;
+    color: var(--cos-text-soft);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-family: var(--cos-font);
+    white-space: nowrap;
+}
+
+.cos-subtool-btn:hover {
+    background: var(--cos-accent-soft);
+    border-color: var(--cos-border-warm);
+    color: var(--cos-text);
+    transform: translateY(-2px);
+    box-shadow: var(--cos-shadow-warm);
+}
+
+.cos-subtool-btn:active {
+    transform: scale(0.92);
+    filter: brightness(1.2);
+    transition-duration: 0.08s;
+}
+
+.cos-subtool-btn.cos-subtool-active {
+    background: var(--cos-accent-soft);
+    border-color: var(--cos-accent);
+    color: var(--cos-accent);
+    animation: cos-pulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   右键技能轮盘（Radial Menu）
+   ============================================ */
+.cos-radial {
+    position: fixed;
+    z-index: 99999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.cos-radial.cos-radial-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.cos-radial-bg {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(20,30,60,0.9) 0%, rgba(20,30,60,0.5) 100%);
+    border: 1px solid var(--cos-border-warm);
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+    box-shadow: 0 0 40px rgba(56,189,248,0.1), inset 0 0 20px rgba(56,189,248,0.03);
+}
+
+.cos-radial-item {
+    position: absolute;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+}
+
+.cos-radial-item:hover {
+    transform: scale(1.2);
+    background: var(--cos-accent-soft);
+    border-color: var(--cos-accent);
+    box-shadow: var(--cos-shadow-warm);
+}
+
+.cos-radial-item:active {
+    transform: scale(0.92);
+    filter: brightness(1.3);
+    transition-duration: 0.08s;
+}
+
+.cos-radial-label {
+    position: absolute;
+    font-size: 10px;
+    color: var(--cos-text-dim);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* ============================================
+   浮动面板（Overlay）
+   ============================================ */
+.cos-overlay {
+    position: fixed;
+    z-index: 9500;
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border-warm);
+    border-radius: var(--cos-radius);
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+    box-shadow: var(--cos-shadow), inset 0 1px 0 rgba(100,160,255,0.06);
+    opacity: 0;
+    transform: scale(0.92);
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+}
+
+.cos-overlay.cos-overlay-visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.cos-overlay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--cos-border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cos-accent);
+}
+
+.cos-overlay-close {
+    width: 22px; height: 22px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--cos-text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cos-overlay-close:hover {
+    background: rgba(248,113,113,0.2);
+    color: var(--cos-red);
+    transform: scale(1.15);
+}
+
+.cos-overlay-close:active {
+    transform: scale(0.92);
+    transition-duration: 0.08s;
+}
+
+.cos-overlay-body {
+    padding: 14px;
+    overflow-y: auto;
+    max-height: calc(80vh - 42px);
+}
+
+.cos-overlay-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    opacity: 0.3;
+}
+.cos-overlay-resize::before {
+    content: '';
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--cos-red);
+    border-bottom: 2px solid var(--cos-red);
+}
+.cos-overlay-resize:hover::before {
+    border-color: #ff4444;
+}
+.cos-overlay-resize:hover {
+    opacity: 0.7;
+}
+
+/* ============================================
+   Toast 提示（玻璃拟态 + 弹性滑入）
+   ============================================ */
+.cos-toast {
+    position: fixed;
+    top: 44px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-16px);
+    padding: 6px 18px;
+    background: var(--cos-surface-warm);
+    color: var(--cos-text);
+    border-radius: 20px;
+    font-size: 12px;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 99999;
+    pointer-events: none;
+    border: 1px solid var(--cos-border-warm);
+    box-shadow: var(--cos-shadow-warm);
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+}
+
+.cos-toast-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================
+   节点样式（ComfyUI 风格 + 冷蓝玻璃拟态）
+   ============================================ */
+.ne-node {
+    position: absolute;
+    min-width: 160px;
+    background: rgba(20, 30, 60, 0.55);
+    border: 1.5px solid var(--cos-border-warm);
+    border-radius: var(--cos-radius-sm);
+    overflow: visible;
+    cursor: grab;
+    user-select: none;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(100,160,255,0.06);
+}
+
+.ne-node:active { cursor: grabbing; }
+
+.ne-node.ne-selected {
+    border-color: var(--cos-accent);
+    box-shadow: 0 0 20px var(--cos-accent-glow), 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(100,160,255,0.06);
+}
+
+.ne-node.ne-instance {
+    border-color: rgba(167, 139, 250, 0.35);
+    border-style: dashed;
+}
+
+.ne-node.ne-instance.ne-selected {
+    border-color: var(--cos-purple);
+    box-shadow: 0 0 20px rgba(167,139,250,0.3), 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.ne-node-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.03) 100%);
+    border-bottom: 1px solid var(--cos-border);
+    border-radius: var(--cos-radius-sm) var(--cos-radius-sm) 0 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cos-accent);
+}
+
+.ne-instance .ne-node-header {
+    background: linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.03) 100%);
+    color: var(--cos-purple);
+}
+
+.ne-node-tools {
+    display: flex;
+    gap: 2px;
+}
+
+.ne-node-tool {
+    width: 20px; height: 20px;
+    border: none;
+    border-radius: var(--cos-radius-xs);
+    background: transparent;
+    color: var(--cos-text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ne-node-tool:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--cos-text);
+    transform: scale(1.1);
+}
+
+.ne-node-tool:active {
+    transform: scale(0.92);
+    transition-duration: 0.08s;
+}
+
+.ne-node-tool.ne-danger:hover {
+    background: rgba(248,113,113,0.2);
+    color: var(--cos-red);
+}
+
+.ne-node-body {
+    padding: 0;
+    border-radius: 0 0 var(--cos-radius-sm) var(--cos-radius-sm);
+    overflow: hidden;
+}
+
+.ne-node-textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px 10px;
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    color: var(--cos-text);
+    font-size: 12px;
+    line-height: 1.6;
+    font-family: var(--cos-font);
+}
+
+.ne-node-textarea::placeholder {
+    color: var(--cos-text-dim);
+}
+
+/* 端口 - 天蓝色 */
+.ne-port {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--cos-accent);
+    border: 2px solid var(--cos-world);
+    cursor: crosshair;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
+    z-index: 5;
+}
+
+.ne-port:hover {
+    transform: scale(1.5);
+    box-shadow: 0 0 12px var(--cos-accent-glow);
+}
+
+.ne-port-in {
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.ne-port-out {
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.ne-port-in:hover { transform: translateY(-50%) scale(1.5); }
+.ne-port-out:hover { transform: translateY(-50%) scale(1.5); }
+
+/* 连线 - 天蓝色渐变 */
+.ne-conn-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: visible;
+}
+
+.ne-conn-path {
+    fill: none;
+    stroke: var(--cos-accent);
+    stroke-width: 2;
+    opacity: 0.5;
+    stroke-linecap: round;
+}
+
+/* 滚动条 - 蓝调细窄 */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(100,160,255,0.15); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100,160,255,0.3); }
+
+/* 插件商店按钮 */
+/* ========== 游戏包裹 ========== */
+.cos-bag {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px;
+}
+.cos-bag-zone {
+    min-height: 70px;
+    border: 1px dashed var(--cos-border);
+    border-radius: var(--cos-radius);
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-content: flex-start;
+    transition: border-color 0.2s, background 0.2s;
+}
+.cos-bag-zone.drag-over {
+    border-color: var(--cos-accent);
+    background: rgba(56,189,248,0.08);
+    box-shadow: inset 0 0 20px rgba(56,189,248,0.05);
+}
+.cos-bag-zone-label {
+    font-size: 10px;
+    color: var(--cos-text-dim);
+    margin-bottom: 4px;
+    padding-left: 2px;
+}
+.cos-bag-item {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--cos-border);
+    border-radius: var(--cos-radius-xs);
+    background: rgba(255,255,255,0.03);
+    cursor: grab;
+    color: var(--cos-text);
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    user-select: none;
+}
+.cos-bag-icon {
+    font-size: 18px;
+    font-weight: bold;
+}
+.cos-bag-name {
+    font-size: 9px;
+    color: var(--cos-text-dim);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 50px;
+    text-align: center;
+}
+/* 编号角标 */
+.cos-skill-num, .cos-bag-num {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    font-size: 8px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.35);
+    line-height: 1;
+    pointer-events: none;
+    z-index: 1;
+}
+.cos-bag-item:hover .cos-bag-num {
+    color: rgba(255,255,255,0.55);
+}
+/* 搜索框 */
+.cos-bag-search {
+    padding: 0 4px 6px;
+}
+.cos-bag-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--cos-border);
+    border-radius: var(--cos-radius-xs);
+    color: var(--cos-text);
+    padding: 6px 10px;
+    font-size: 11px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cos-bag-search-input:focus {
+    border-color: var(--cos-accent);
+    box-shadow: 0 0 12px var(--cos-accent-glow);
+}
+.cos-bag-search-input::placeholder {
+    color: var(--cos-text-dim);
+}
+.cos-bag-item:hover {
+    border-color: var(--cos-border-warm);
+    background: rgba(255,255,255,0.06);
+    transform: translateY(-3px);
+    box-shadow: var(--cos-shadow-warm);
+}
+.cos-bag-item:active {
+    cursor: grabbing;
+    opacity: 0.7;
+    transform: scale(0.92);
+    transition-duration: 0.08s;
+}
+.cos-bag-item.installed {
+    border-color: rgba(52,211,153,0.3);
+    background: rgba(52,211,153,0.06);
+}
+/* 悬浮提示 */
+.cos-bag-tip {
+    position: fixed;
+    padding: 6px 12px;
+    background: rgba(10, 14, 26, 0.92);
+    border: 1px solid var(--cos-border-warm);
+    border-radius: var(--cos-radius-xs);
+    color: var(--cos-text);
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 99999;
+    max-width: 220px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    line-height: 1.5;
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+}
+.cos-bag-tip.visible {
+    opacity: 1;
+}
+/* 底部按钮悬浮提示 */
+.cos-hotbar-tip {
+    position: fixed;
+    padding: 6px 12px;
+    background: rgba(10, 14, 26, 0.92);
+    border: 1px solid var(--cos-border-warm);
+    border-radius: var(--cos-radius-xs);
+    color: var(--cos-text);
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 99999;
+    max-width: 260px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    line-height: 1.5;
+    white-space: normal;
+    backdrop-filter: var(--cos-blur);
+    -webkit-backdrop-filter: var(--cos-blur);
+}
+.cos-hotbar-tip.visible {
+    opacity: 1;
+}
+
+[data-skill-id="pixel-paint"] div.pp-header:nth-child(2) > h1:nth-child(1) {
+    color: #f83acf;
+}

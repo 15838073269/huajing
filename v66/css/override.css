@@ -1,0 +1,26 @@
+/* ============================================
+   UI Debugger Overrides - 自动生成
+   ============================================
+   由 UI 调试器插件生成，覆盖画境 v66 的前端样式。
+   
+   使用方式：
+   1. 在画境中激活 UI 调试器插件（快捷键 0）
+   2. 开启调试模式，点选任意元素
+   3. 在属性面板中调整样式
+   4. 点击「生成 CSS」，复制或下载本文件
+   5. 将本文件放入 css/ 目录
+   6. 在 index.html 的 </head> 前加：
+      <link rel="stylesheet" href="css/override.css">
+   
+   ============================================
+ */
+
+/* 示例：调整计算器插件字体大小
+[data-skill-id="calculator"] .fc-body {
+    font-size: 18px !important;
+}
+*/
+
+[data-skill-id="pixel-paint"] div.pp-header:nth-child(2) > h1:nth-child(1) {
+    color: #f83acf;
+}
