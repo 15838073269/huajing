@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画境 v67</title>
+    <link rel="stylesheet" href="css/style.css?v=67">
+    <link rel="stylesheet" href="css/override.css?v=112">
+    <link rel="stylesheet" href="css/plugin-theme.css?v=2">
+</head>
+<body>
+
+    <!-- HUD 顶部 -->
+    <div class="cos-hud">
+        <div class="cos-hud-left">
+            <span class="cos-hud-brand">画境v67</span>
+        </div>
+        <div class="cos-hud-right">
+            <button class="cos-hud-btn" id="cos-btn-settings" title="设置">设置</button>
+            <button class="cos-hud-btn" id="cos-btn-download" title="下载图片">下载</button>
+            <button class="cos-hud-btn" id="cos-btn-reset" title="回到原点(0,0)">原点</button>
+            <span style="font-size:11px;color:var(--cos-text-dim);">缩放: <span id="cos-zoom">100%</span></span>
+        </div>
+    </div>
+
+    <!-- 子工具栏 -->
+    <div class="cos-subtools" id="cos-subtools"></div>
+
+    <!-- 游戏世界（画布） -->
+    <div id="cos-world"></div>
+
+    <!-- 技能栏 -->
+    <nav class="cos-hotbar" id="cos-hotbar">
+        <div class="cos-hotbar-inner"></div>
+    </nav>
+
+    <!-- 核心（不要改顺序） -->
+    <script src="js/lib/jszip.min.js"></script>
+    <script src="js/lib/pixi.min.js"></script>
+    <script src="js/core/world.js?v=67"></script>
+    <script src="js/core/ui-utils.js?v=65"></script>
+    <script src="js/core/skills.js?v=111"></script>
+    <script src="js/core/plugin-loader.js?v=111"></script>
+    <script src="js/core/storage.js?v=111"></script>
+    <!-- CosAPI + CosUI（低代码基础设施） -->
+    <script src="js/core/cos-api.js?v=122"></script>
+    <script src="js/core/cos-ui.js?v=123"></script>
+    <script src="js/core/canvas-images.js?v=6"></script>
+    <script src="js/core/canvas-follow.js?v=1"></script>
+
+    <!-- 函数注册 + 工作流引擎（AI 可调用的通用函数系统） -->
+    <script src="js/core/function-registry.js?v=123"></script>
+    <script src="js/core/workflow-runner.js?v=123"></script>
+    <script src="js/functions/register.js?v=123"></script>
+
+    <!-- 设置（固定功能，非插件） -->
+    <script src="js/skills/settings.js?v=111"></script>
+
+    <!-- 插件数据（必须在插件之前加载） -->
+    <script src="js/data/mao-quotes.js?v=111"></script>
+    <script src="js/data/prompt-templates.js?v=111"></script>
+    <script src="js/data/hanzi-3500-data.js?v=1"></script>
+    <script src="js/data/hanzi-theme-data.js?v=1"></script>
+
+    <!-- 插件清单（在这里加文件名，不需要改 index.html 的其他地方） -->
+    <script src="js/plugins.js?v=111"></script>
+
+    <!-- 书境插件 -->
+    <script src="js/skills/book-reader.js?v=1"></script>
+
+    <!-- UI 调试器 -->
+    <script src="js/skills/ui-debugger.js?v=122"></script>
+
+    <!-- Three.js（3D渲染库，已删除） -->
+    <!-- <script src="js/lib/three.min.js?v=111"></script> -->
+    <!-- <script src="js/lib/OrbitControls.js?v=111"></script> -->
+    <!-- LiteGraph.js（Canvas 节点渲染库） -->
+    <script src="js/lib/litegraph.js?v=111"></script>
+    <!-- 向量造字插件及相关库（已删除） -->
+    <!-- 像素画3D扩展（已删除） -->
+    <!-- <script src="js/skills/pixel-paint-3d.js?v=111"></script> -->
+    <!-- cnchar 汉字拼音笔画偏旁库 -->
+    <script src="js/lib/cnchar.min.js?v=1"></script>
+    <script src="js/lib/cnchar.radical.min.js?v=1"></script>
+
+    <!-- 启动（必须最后加载） -->
+    <script src="js/main.js?v=114"></script>
+
+
+
+</body></html>

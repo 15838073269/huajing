@@ -1,0 +1,1135 @@
+/* ============================================
+   画境 v67 — 插件公共主题样式
+   所有插件共享的深色玻璃拟态 UI 样式
+   依赖 style.css 中的 --cos-* CSS 变量
+   ============================================
+   使用方式：
+   1. HTML 中直接用 class="cos-pbtn cos-pbtn-primary"
+   2. JS 中用 CosUI.button.primary('确定') 等工厂函数
+   3. 自定义样式通过 --cos-* 变量覆盖
+   ============================================ */
+
+/* ========================================
+   1. 窗口容器（Overlay）
+   ======================================== */
+.cos-pwin {
+    position: fixed;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    background: var(--cos-world);
+    color: var(--cos-text);
+    font-family: var(--cos-font);
+    font-size: 13px;
+    border-radius: var(--cos-radius-sm);
+    border: 1px solid var(--cos-border);
+    box-shadow: var(--cos-shadow);
+    overflow: hidden;
+    user-select: none;
+    min-width: 320px;
+    min-height: 200px;
+}
+
+/* ========================================
+   2. 标题栏（Header）
+   ======================================== */
+.cos-pwin-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--cos-surface-warm);
+    border-bottom: 1px solid var(--cos-border);
+    cursor: move;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.cos-pwin-hdr-title {
+    font-weight: 600;
+    color: var(--cos-accent);
+    font-size: 14px;
+}
+
+.cos-pwin-hdr-sub {
+    font-size: 10px;
+    color: var(--cos-text-dim);
+    margin-left: 8px;
+}
+
+.cos-pwin-hdr-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* 标题栏渐变文字（可选） */
+.cos-pwin-hdr-title-gradient {
+    font-size: 16px;
+    font-weight: bold;
+    background: linear-gradient(135deg, var(--cos-accent), #7dd3fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
+}
+
+/* ========================================
+   3. 关闭按钮（Close）
+   ======================================== */
+.cos-pclose {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--cos-text-soft);
+    font-size: 16px;
+    transition: all 0.12s;
+}
+
+.cos-pclose:hover {
+    background: rgba(220, 80, 60, 0.2);
+    color: #e87060;
+}
+
+/* 按钮形式的关闭 */
+.cos-pclose-btn {
+    background: rgba(220, 80, 60, 0.2);
+    border: 1px solid rgba(220, 80, 60, 0.3);
+    color: #e87060;
+    border-radius: 8px;
+    padding: 5px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+
+.cos-pclose-btn:hover {
+    background: rgba(220, 80, 60, 0.4);
+}
+
+.cos-pclose-btn:active {
+    transform: scale(0.92);
+}
+
+/* ========================================
+   4. 按钮系列（Buttons）
+   ======================================== */
+.cos-pbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.15s;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.cos-pbtn:active {
+    transform: scale(0.92);
+}
+
+.cos-pbtn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* 主要按钮 — 蓝色 */
+.cos-pbtn-primary {
+    background: var(--cos-accent);
+    color: #fff;
+}
+
+.cos-pbtn-primary:hover {
+    background: #0ea5e9;
+    transform: translateY(-1px);
+}
+
+/* 次要按钮 — 透明边框 */
+.cos-pbtn-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--cos-text);
+    border: 1px solid var(--cos-border);
+}
+
+.cos-pbtn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* 成功按钮 — 绿色 */
+.cos-pbtn-success {
+    background: var(--cos-green);
+    color: #fff;
+}
+
+.cos-pbtn-success:hover {
+    background: #10b981;
+}
+
+/* 警告按钮 — 黄色 */
+.cos-pbtn-warn {
+    background: var(--cos-yellow);
+    color: #1a1a2e;
+}
+
+.cos-pbtn-warn:hover {
+    background: #f59e0b;
+}
+
+/* 危险按钮 — 红色 */
+.cos-pbtn-danger {
+    background: rgba(220, 80, 60, 0.15);
+    color: #e87060;
+    border: 1px solid rgba(220, 80, 60, 0.3);
+}
+
+.cos-pbtn-danger:hover {
+    background: rgba(220, 80, 60, 0.25);
+}
+
+/* 小号按钮 */
+.cos-pbtn-sm {
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+/* 按钮组 */
+.cos-pbtn-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.cos-pbtn-group .cos-pbtn {
+    flex: 1;
+    min-width: 0;
+}
+
+.cos-pbtn-group .cos-pbtn.active {
+    background: var(--cos-accent);
+    color: #fff;
+    border-color: var(--cos-accent);
+}
+
+/* ========================================
+   5. 输入控件（Inputs）
+   ======================================== */
+.cos-pinput {
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    color: var(--cos-text);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.12s;
+}
+
+.cos-pinput:focus {
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.08);
+}
+
+.cos-pinput::placeholder {
+    color: var(--cos-text-dim);
+}
+
+.cos-ptextarea {
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    color: var(--cos-text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+    resize: vertical;
+    line-height: 1.5;
+    transition: border-color 0.12s;
+}
+
+.cos-ptextarea:focus {
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.08);
+}
+
+.cos-ptextarea::placeholder {
+    color: var(--cos-text-dim);
+}
+
+.cos-pselect {
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    color: var(--cos-text);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+    outline: none;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.12s;
+}
+
+.cos-pselect:focus {
+    border-color: rgba(56, 189, 248, 0.4);
+}
+
+.cos-plabel {
+    font-size: 11px;
+    color: var(--cos-text-soft);
+    font-weight: 500;
+}
+
+/* ========================================
+   6. 工具栏（Toolbar）
+   ======================================== */
+.cos-ptoolbar {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: var(--cos-surface-warm);
+    border-bottom: 1px solid var(--cos-border);
+    flex-shrink: 0;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cos-ptoolbar .cos-psep {
+    width: 1px;
+    height: 22px;
+    background: var(--cos-border);
+    flex-shrink: 0;
+}
+
+.cos-ptoolbar .cos-plabel {
+    font-size: 12px;
+    color: var(--cos-text-soft);
+    white-space: nowrap;
+}
+
+/* ========================================
+   7. 分区面板（Section）
+   ======================================== */
+.cos-psection {
+    margin-bottom: 14px;
+    padding: 10px;
+    border: 1px dashed var(--cos-border-warm);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.cos-psection-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--cos-text-soft);
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cos-psection-title::before {
+    content: "";
+    width: 3px;
+    height: 12px;
+    background: var(--cos-accent);
+    border-radius: 2px;
+}
+
+/* ========================================
+   8. 侧边栏 + 主区域布局
+   ======================================== */
+.cos-papp {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.cos-psidebar {
+    width: 240px;
+    min-width: 200px;
+    background: var(--cos-surface-warm);
+    border-right: 1px solid var(--cos-border);
+    overflow-y: auto;
+    padding: 12px;
+    flex-shrink: 0;
+}
+
+.cos-pmain {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    min-width: 0;
+}
+
+/* 棋盘格背景（图片处理类插件用） */
+.cos-pmain-checker {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    position: relative;
+    background: repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 0 0 / 20px 20px;
+    min-width: 0;
+}
+
+/* ========================================
+   9. 标签页（Tabs）
+   ======================================== */
+.cos-ptabs {
+    display: flex;
+    gap: 4px;
+    background: var(--cos-world);
+    border-radius: 10px;
+    padding: 3px;
+}
+
+.cos-ptab {
+    padding: 7px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--cos-text-soft);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.cos-ptab.active {
+    background: var(--cos-accent);
+    color: #fff;
+}
+
+.cos-ptab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.cos-ptab:active {
+    transform: scale(0.92);
+}
+
+/* 标签栏（顶部条形） */
+.cos-ptabbar {
+    height: 30px;
+    background: var(--cos-surface);
+    border-bottom: 1px solid var(--cos-border);
+    display: flex;
+    align-items: stretch;
+    flex-shrink: 0;
+    overflow-x: auto;
+}
+
+.cos-ptabbar .cos-ptab {
+    padding: 0 10px;
+    border-radius: 0;
+    border-right: 1px solid var(--cos-border);
+    white-space: nowrap;
+    position: relative;
+}
+
+.cos-ptabbar .cos-ptab.active {
+    background: var(--cos-surface-warm);
+    color: var(--cos-text);
+    border-radius: 0;
+}
+
+.cos-ptabbar .cos-ptab.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--cos-accent);
+}
+
+/* 面板容器 */
+.cos-ppanel {
+    display: none;
+}
+
+.cos-ppanel.active {
+    display: block;
+}
+
+/* ========================================
+   10. 表格（Table）
+   ======================================== */
+.cos-ptable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.cos-ptable thead th {
+    background: var(--cos-surface-warm);
+    color: var(--cos-text-soft);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid var(--cos-border);
+}
+
+.cos-ptable tbody tr {
+    border-bottom: 1px solid rgba(100, 160, 255, 0.04);
+    transition: background 0.1s;
+}
+
+.cos-ptable tbody tr:hover {
+    background: rgba(30, 45, 80, 0.3);
+}
+
+.cos-ptable td {
+    padding: 8px 14px;
+    white-space: nowrap;
+}
+
+/* ========================================
+   11. 徽章/标签（Badge）
+   ======================================== */
+.cos-pbadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--cos-accent-soft);
+    color: var(--cos-accent);
+}
+
+.cos-pbadge-success {
+    background: rgba(52, 211, 153, 0.1);
+    color: var(--cos-green);
+}
+
+.cos-pbadge-warn {
+    background: rgba(251, 191, 36, 0.1);
+    color: var(--cos-yellow);
+}
+
+.cos-pbadge-danger {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--cos-red);
+}
+
+/* ========================================
+   12. 信息栏（Info Bar / Status Bar）
+   ======================================== */
+.cos-pinfobar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    background: var(--cos-surface-warm);
+    border-top: 1px solid var(--cos-border);
+    font-size: 11px;
+    color: var(--cos-text-soft);
+    flex-shrink: 0;
+}
+
+.cos-pinfobar .cos-pinfobar-val {
+    color: var(--cos-accent);
+    font-weight: 600;
+}
+
+/* ========================================
+   13. 模态对话框（Modal）
+   ======================================== */
+.cos-pmodal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    justify-content: center;
+    align-items: center;
+}
+
+.cos-pmodal-overlay.show {
+    display: flex;
+}
+
+.cos-pmodal-box {
+    background: var(--cos-world);
+    border: 1px solid var(--cos-border);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    animation: cos-pmodal-pop 0.2s ease;
+    position: relative;
+}
+
+@keyframes cos-pmodal-pop {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.cos-pmodal-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 24px;
+    color: var(--cos-text-soft);
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: color 0.12s;
+}
+
+.cos-pmodal-close:hover {
+    color: #e87060;
+}
+
+/* ========================================
+   14. 滚动条（Scrollbar）
+   ======================================== */
+.cos-pscroll::-webkit-scrollbar {
+    width: 5px;
+}
+
+.cos-pscroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.cos-pscroll::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.2);
+    border-radius: 3px;
+}
+
+/* ========================================
+   15. 空状态（Empty State）
+   ======================================== */
+.cos-pempty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 14px;
+    color: var(--cos-text-dim);
+    font-size: 14px;
+    text-align: center;
+}
+
+/* ========================================
+   16. 加载动画（Loading Spinner）
+   ======================================== */
+.cos-ploading {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(56, 189, 248, 0.2);
+    border-top-color: var(--cos-accent);
+    border-radius: 50%;
+    animation: cos-ploading-spin 0.6s linear infinite;
+}
+
+@keyframes cos-ploading-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   17. Toast 提示
+   ======================================== */
+.cos-ptoast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--cos-surface-warm);
+    color: var(--cos-text);
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: 1px solid var(--cos-border);
+    box-shadow: var(--cos-shadow);
+    font-size: 13px;
+    z-index: 100001;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+}
+
+.cos-ptoast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ========================================
+   18. 文件选择标签
+   ======================================== */
+.cos-pfile-label {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--cos-border);
+    border-radius: 6px;
+    padding: 8px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--cos-text-soft);
+    display: inline-block;
+    transition: all 0.12s;
+}
+
+.cos-pfile-label:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--cos-text);
+}
+
+/* ========================================
+   19. 通用 flex 工具类
+   ======================================== */
+.cos-prow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.cos-pcol {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cos-pflex {
+    flex: 1;
+}
+
+.cos-pflex-0 {
+    flex-shrink: 0;
+}
+
+/* ========================================
+   20. 比例选择面板（Ratio Panel）
+   ======================================== */
+.cos-rp-body {
+    padding: 8px;
+    overflow: auto;
+    max-height: 340px;
+}
+
+.cos-rp-grid {
+    display: grid;
+    grid-template-columns: 20px repeat(8, 1fr);
+    gap: 2px;
+    font-size: 10px;
+}
+
+.cos-rp-grid .rp-h {
+    text-align: center;
+    padding: 4px 2px;
+    color: var(--cos-text-dim);
+    font-weight: 500;
+    font-size: 9px;
+}
+
+.cos-rp-grid .rp-v {
+    text-align: right;
+    padding: 4px 4px 4px 0;
+    color: var(--cos-text-dim);
+    font-weight: 500;
+    font-size: 9px;
+}
+
+.cos-rp-grid .rp-cell {
+    text-align: center;
+    padding: 5px 2px;
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--cos-text-soft);
+    transition: all 0.1s;
+    font-size: 10px;
+}
+
+.cos-rp-grid .rp-cell:hover {
+    border-color: var(--cos-accent);
+    color: var(--cos-text);
+    background: var(--cos-surface-warm);
+}
+
+.cos-rp-grid .rp-cell.active {
+    background: var(--cos-accent);
+    color: #1a1a2e;
+    border-color: var(--cos-accent);
+    font-weight: 600;
+}
+
+.cos-rp-grid .rp-cell.disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+.cos-rp-grid .rp-cell.disabled:hover {
+    border-color: var(--cos-border);
+    color: var(--cos-text-soft);
+    background: var(--cos-surface);
+}
+
+.cos-rp-extra {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--cos-border);
+}
+
+.cos-rp-extra .rp-extra-btn {
+    flex: 1;
+    padding: 5px 8px;
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--cos-text-soft);
+    transition: all 0.1s;
+    text-align: center;
+    font-family: inherit;
+}
+
+.cos-rp-extra .rp-extra-btn:hover {
+    border-color: var(--cos-accent);
+    color: var(--cos-text);
+    background: var(--cos-surface-warm);
+}
+
+.cos-rp-extra .rp-extra-btn.active {
+    background: var(--cos-accent);
+    color: #1a1a2e;
+    border-color: var(--cos-accent);
+    font-weight: 600;
+}
+
+.cos-rp-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 10px;
+    color: var(--cos-text-soft);
+}
+
+.cos-rp-foot .rp-cur {
+    color: var(--cos-text);
+    font-weight: 600;
+}
+
+/* 自定义比例输入区 */
+.cos-rp-custom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--cos-border);
+}
+
+.cos-rp-custom .rp-custom-label {
+    font-size: 11px;
+    color: var(--cos-text-soft);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.cos-rp-custom .rp-custom-input {
+    width: 52px;
+    background: var(--cos-surface);
+    border: 1px solid var(--cos-border);
+    color: var(--cos-text);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    outline: none;
+    font-family: inherit;
+    text-align: center;
+    transition: border-color 0.12s;
+}
+
+.cos-rp-custom .rp-custom-input:focus {
+    border-color: var(--cos-accent);
+}
+
+.cos-rp-custom .rp-custom-input::-webkit-inner-spin-button,
+.cos-rp-custom .rp-custom-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.cos-rp-custom .rp-custom-colon {
+    color: var(--cos-text-dim);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.cos-rp-custom .rp-custom-btn {
+    padding: 4px 14px;
+    background: var(--cos-accent);
+    color: #1a1a2e;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.12s;
+    font-family: inherit;
+    margin-left: auto;
+}
+
+.cos-rp-custom .rp-custom-btn:hover {
+    opacity: 0.85;
+}
+
+.cos-rp-custom .rp-custom-btn:active {
+    transform: scale(0.92);
+}
+
+/* ========================================
+   21. 帮助覆盖层
+   ======================================== */
+.cos-phelp-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 15, 30, 0.92);
+    z-index: 10000;
+    display: none;
+    flex-direction: column;
+}
+
+.cos-phelp-overlay.show {
+    display: flex;
+}
+
+.cos-phelp-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #ccc;
+}
+
+.cos-phelp-body h3 {
+    margin: 12px 0 4px;
+    font-size: 14px;
+    color: var(--cos-accent);
+}
+
+.cos-phelp-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.cos-phelp-body td {
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    vertical-align: top;
+}
+
+/* ========================================
+   22. 画布 HUD 下载菜单
+   ======================================== */
+.ci-hud-menu {
+    position: fixed;
+    top: 52px;
+    right: 16px;
+    min-width: 180px;
+    background: var(--cos-surface, rgba(20, 24, 40, 0.96));
+    border: 1px solid var(--cos-border, rgba(255, 255, 255, 0.1));
+    border-radius: var(--cos-radius-sm, 8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    backdrop-filter: var(--cos-blur, blur(12px));
+    -webkit-backdrop-filter: var(--cos-blur, blur(12px));
+    z-index: 9500;
+    padding: 6px 0;
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    transform-origin: top right;
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    font-size: 13px;
+}
+
+.ci-hud-menu.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.ci-hud-menu-item {
+    padding: 9px 16px;
+    cursor: pointer;
+    color: var(--cos-text, #e0e0e0);
+    transition: background 0.12s ease, color 0.12s ease;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.ci-hud-menu-item:hover {
+    background: var(--cos-surface-hover, rgba(255, 255, 255, 0.08));
+    color: var(--cos-accent, #7c9eff);
+}
+
+.ci-hud-menu-item.ci-disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.ci-hud-menu-item.ci-disabled:hover {
+    background: none;
+    color: var(--cos-text, #e0e0e0);
+}
+
+.ci-hud-menu-sep {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 4px 0;
+}
+
+/* ========================================
+   23. 批量选择模式
+   ======================================== */
+.ci-batch-bar {
+    position: fixed;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 20px;
+    background: var(--cos-surface, rgba(20, 24, 40, 0.96));
+    border: 1px solid var(--cos-border, rgba(255, 255, 255, 0.1));
+    border-radius: var(--cos-radius-sm, 8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    backdrop-filter: var(--cos-blur, blur(12px));
+    -webkit-backdrop-filter: var(--cos-blur, blur(12px));
+    z-index: 9500;
+    font-size: 13px;
+    color: var(--cos-text, #e0e0e0);
+    animation: ci-batch-in 0.25s ease;
+}
+
+@keyframes ci-batch-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.ci-batch-count {
+    font-weight: 600;
+    color: var(--cos-accent, #7c9eff);
+}
+
+.ci-batch-all,
+.ci-batch-dl,
+.ci-batch-cancel {
+    border: 1px solid var(--cos-border, rgba(255, 255, 255, 0.15));
+    background: var(--cos-surface, rgba(30, 36, 56, 0.9));
+    color: var(--cos-text, #e0e0e0);
+    padding: 5px 14px;
+    border-radius: var(--cos-radius-xs, 6px);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ci-batch-all:hover,
+.ci-batch-dl:hover {
+    background: var(--cos-accent, #7c9eff);
+    color: #fff;
+    border-color: var(--cos-accent, #7c9eff);
+}
+
+.ci-batch-cancel:hover {
+    background: rgba(255, 80, 80, 0.2);
+    border-color: rgba(255, 80, 80, 0.5);
+    color: #ff8080;
+}
+
+.ci-batch-dl {
+    background: var(--cos-accent, #7c9eff);
+    color: #fff;
+    border-color: var(--cos-accent, #7c9eff);
+    font-weight: 600;
+}
+
+.ci-batch-dl:hover {
+    filter: brightness(1.15);
+}
+
+/* 批量模式下的复选框 */
+.ci-batch-check {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    transition: all 0.15s ease;
+    font-size: 14px;
+    color: #fff;
+    line-height: 1;
+}
+
+.ci-batch-mode .ci-batch-check {
+    display: flex;
+}
+
+.ci-batch-selected .ci-batch-check {
+    background: var(--cos-accent, #7c9eff);
+    border-color: var(--cos-accent, #7c9eff);
+}
+
+.ci-batch-selected .ci-batch-check::after {
+    content: '✓';
+    font-weight: 700;
+}
+
+.ci-batch-selected {
+    outline: 2px solid var(--cos-accent, #7c9eff);
+    outline-offset: 2px;
+}
+
+/* 批量模式下隐藏删除按钮和来源标签 */
+.ci-batch-mode .ci-del,
+.ci-batch-mode .ci-badge {
+    display: none !important;
+}
