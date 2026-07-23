@@ -336,7 +336,43 @@ var PromptTemplateSkill = {
             reader.onload = function(ev) {
                 try {
                     var data = JSON.parse(ev.target.result);
-                    if (Array.isArray(data)) {
+                    
+                    // 完整的模板数据格式（新版本）
+                    if (data.version && data.templates && Array.isArray(data.templates)) {
+                        var count = 0;
+                        data.templates.forEach(function(item) {
+                            var t = typeof item === 'string' ? item : (item.text || item.template || '');
+                            var tags = item.tags || [];
+                            if (t) { 
+                                self._templates.unshift({ text: t, tags: tags }); 
+                                count++; 
+                            }
+                        });
+                        
+                        // 偏移 _lastInputs 索引
+                        var shifted = {};
+                        Object.keys(self._lastInputs).forEach(function(key) {
+                            var parts = key.split('-');
+                            shifted[(parseInt(parts[0]) + count) + '-' + parts[1]] = self._lastInputs[key];
+                        });
+                        self._lastInputs = shifted;
+                        
+                        // 导入标签定义（去重）
+                        if (Array.isArray(data.tags)) {
+                            data.tags.forEach(function(tag) {
+                                if (self._tags.indexOf(tag) === -1) {
+                                    self._tags.push(tag);
+                                }
+                            });
+                        }
+                        
+                        self._saveData(); 
+                        self._renderSidebar(); 
+                        self._renderList(); 
+                        self._showToast('已导入 ' + count + ' 条模板（含完整数据）');
+                    }
+                    // 旧的数组格式（兼容性）
+                    else if (Array.isArray(data)) {
                         var count = 0;
                         data.forEach(function(item) {
                             var t = typeof item === 'string' ? item : (item.text || item.template || '');
@@ -369,11 +405,27 @@ var PromptTemplateSkill = {
         });
 
         panel.querySelector('#ptExport').addEventListener('click', function() {
-            var blob = new Blob([JSON.stringify(self._templates, null, 2)], { type: 'application/json' });
+            // 导出完整数据，包括所有设置和用户记忆
+            var exportData = {
+                version: 3,
+                exportedAt: new Date().toISOString(),
+                templates: self._templates,
+                tags: self._tags,
+                activeTag: self._activeTag,
+                lastInputs: self._lastInputs,
+                sidebarWidth: self._sidebarWidth,
+                panelX: self._panelX,
+                panelY: self._panelY,
+                panelW: self._panelW,
+                panelH: self._panelH,
+                fontSize: self._fontSize
+            };
+            var blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
-            a.href = url; a.download = 'prompt-templates.json'; a.click();
+            a.href = url; a.download = 'prompt-templates-' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
             URL.revokeObjectURL(url);
+            self._showToast('已导出完整模板数据');
         });
 
         panel.querySelector('#ptClear').addEventListener('click', function() {

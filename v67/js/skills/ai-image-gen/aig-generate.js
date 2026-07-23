@@ -13,7 +13,7 @@ AIImageGenSkill._generate = async function() {
     var rawPrompt = (fs.prompt || '').trim();
     if (!rawPrompt) { this._setStatus('⚠️ 输入提示词'); return; }
 
-    var apiKey = (this._apiKey || '').trim();
+    var apiKey = (this._getCurrentApiKey() || '').trim();
     if (!apiKey) { this._setStatus('⚠️ 设置 API Key'); return; }
 
     // 从提示词末尾提取 -宽x高 分辨率后缀
@@ -100,7 +100,7 @@ AIImageGenSkill._generate = async function() {
             formData.append('n', String(fs.numImages || 1));
             formData.append('size', overrideSize || this._getSizeString(fs));
             if (fs.quality) formData.append('quality', fs.quality);
-            resp = await fetch((this._apiBase || 'https://api3.wlai.vip') + '/v1/images/edits', {
+            resp = await fetch((this._getCurrentApiBase() || 'https://api3.wlai.vip') + '/v1/images/edits', {
                 method: 'POST',
                 headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + apiKey },
                 body: formData
@@ -114,7 +114,7 @@ AIImageGenSkill._generate = async function() {
                 size: overrideSize || this._getSizeString(fs)
             };
             if (fs.quality) bodyObj.quality = fs.quality;
-            resp = await fetch((this._apiBase || 'https://api3.wlai.vip') + '/v1/images/generations', {
+            resp = await fetch((this._getCurrentApiBase() || 'https://api3.wlai.vip') + '/v1/images/generations', {
                 method: 'POST',
                 headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
                 body: JSON.stringify(bodyObj)

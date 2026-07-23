@@ -342,6 +342,7 @@ AIImageGenSkill._deleteHistoryEntry = function(record) {
 
 AIImageGenSkill._exportHistory = function() {
     var self = this;
+    self._setStatus('正在导出历史记录...');
     this._getDB().then(function(db) {
         var histTx = db.transaction('history', 'readonly');
         var curReq = histTx.objectStore('history').openCursor();
@@ -371,20 +372,33 @@ AIImageGenSkill._exportHistory = function() {
                     var imgTx = db.transaction('history-images', 'readonly');
                     var imgStore = imgTx.objectStore('history-images');
                     var loaded = {}; var done2 = 0; var total = needKeys.length;
+                    var failed = 0;
                     for (var ii = 0; ii < needKeys.length; ii++) {
                         (function(nk) {
                             var imgReq = imgStore.get(nk.key);
                             imgReq.onsuccess = function() {
-                                if (imgReq.result) loaded[nk.recIdx + '-' + nk.imgIdx] = imgReq.result;
+                                if (imgReq.result) {
+                                    loaded[nk.recIdx + '-' + nk.imgIdx] = imgReq.result;
+                                } else {
+                                    failed++;
+                                    console.warn('历史图片加载失败: key=' + nk.key + ', recordIdx=' + nk.recIdx + ', imgIdx=' + nk.imgIdx);
+                                }
                                 done2++;
                                 if (done2 >= total) cb(loaded);
                             };
-                            imgReq.onerror = function() { done2++; if (done2 >= total) cb(loaded); };
+                            imgReq.onerror = function() {
+                                failed++;
+                                console.error('历史图片请求错误: key=' + nk.key + ', recordIdx=' + nk.recIdx + ', imgIdx=' + nk.imgIdx);
+                                done2++; if (done2 >= total) cb(loaded); 
+                            };
                         })(needKeys[ii]);
                     }
                 };
                 loadImages(function(imgMap) {
                     var zip = new JSZip();
+                    var missingImages = 0;
+                    var totalExpectedImages = needKeys.length;
+                    
                     for (var i = 0; i < fullRecords.length; i++) {
                         var r = fullRecords[i];
                         var idx = String(i + 1).padStart(3, '0');
@@ -392,8 +406,15 @@ AIImageGenSkill._exportHistory = function() {
                         var ts = r.timestamp ? new Date(r.timestamp).toLocaleString() : '-';
                         var prompt = (r.prompt || '').replace(/\n/g, ' ');
                         for (var j = 0; j < r._imgCount; j++) {
-                            var dataUrl = imgMap[i + '-' + j] || (j === 0 ? (r.imageDataUrl || '') : '');
-                            if (!dataUrl) continue;
+                            var dataUrl = imgMap[i + '-' + j];
+                            // 如果从 history-images 中没有获取到图片，尝试从记录的 imageDataUrl 获取（兼容性处理）
+                            if (!dataUrl && j === 0) {
+                                dataUrl = r.imageDataUrl || '';
+                            }
+                            if (!dataUrl) {
+                                console.warn('导出历史记录: 记录 #' + (i + 1) + ' 的第 ' + (j + 1) + ' 张图片数据缺失 (key: ' + (j === 0 ? r.id : r.id + '-' + j) + ')');
+                                continue;
+                            }
                             var ext = 'png'; var mm = dataUrl.match(/^data:image\/(\w+)/);
                             if (mm) ext = mm[1] === 'jpeg' ? 'jpg' : mm[1];
                             var commaIdx = dataUrl.indexOf(',');
@@ -423,7 +444,38 @@ AIImageGenSkill._exportHistory = function() {
                         a.download = 'ai-history-' + new Date().toISOString().slice(0, 10) + '.zip';
                         a.click();
                         URL.revokeObjectURL(url);
-                        self._setStatus('已导出 ' + fullRecords.length + ' 条记录（ZIP）');
+                        
+                        // 统计导出内容
+                        var totalImages = 0;
+                        var recordsWithImages = 0;
+                        for (var i = 0; i < fullRecords.length; i++) {
+                            var r = fullRecords[i];
+                            var imageCount = 0;
+                            for (var j = 0; j < r._imgCount; j++) {
+                                var dataUrl = imgMap[i + '-' + j];
+                                if (!dataUrl && j === 0) dataUrl = r.imageDataUrl || '';
+                                if (dataUrl) imageCount++;
+                            }
+                            if (imageCount > 0) {
+                                recordsWithImages++;
+                                totalImages += imageCount;
+                            }
+                        }
+                        
+                        var msg = '已导出 ' + fullRecords.length + ' 条记录';
+                        if (totalImages > 0) {
+                            msg += ' (' + totalImages + ' 张图片)';
+                        }
+                        if (recordsWithImages < fullRecords.length) {
+                            msg += ' - 注意: ' + (fullRecords.length - recordsWithImages) + ' 条记录缺少图片数据';
+                        }
+                        if (totalImages < totalExpectedImages) {
+                            msg += ' - 缺失: ' + (totalExpectedImages - totalImages) + ' 张图片';
+                        }
+                        self._setStatus(msg + '（ZIP）');
+                    }).catch(function(err) {
+                        console.error('ZIP 生成失败:', err);
+                        self._setStatus('导出失败: ' + (err.message || 'ZIP 生成错误'));
                     });
                 });
             }

@@ -33,23 +33,14 @@ AIImageGenSkill._showSettings = function() {
     // 内容区
     var body = document.createElement('div');
     body.className = 'aig-settings-body';
-    body.innerHTML =
-        '<div class="aig-settings-row">' +
-            '<span class="aig-sl">API 地址</span>' +
-            '<span class="aig-sc"><input type="text" id="aigSetBase" placeholder="https://api3.wlai.vip" value="' + this._escapeHtml(this._apiBase) + '"></span>' +
-        '</div>' +
-        '<div class="aig-settings-row">' +
-            '<span class="aig-sl">API Key</span>' +
-            '<span class="aig-sc"><input type="password" id="aigSetKey" placeholder="sk-..." value="' + this._escapeHtml(this._apiKey) + '"></span>' +
-            '<span class="aig-sr"><a id="aigGetKeyLink" href="' + this._escapeHtml(this._apiBase || 'https://api3.wlai.vip') + '/register?aff=b1VJ" target="_blank">获取 \u2192</a></span>' +
-        '</div>';
+    body.innerHTML = this._renderApiList();
     ov.appendChild(body);
 
     // 操作按钮（使用公共 cos-pbtn）
     var actions = document.createElement('div');
     actions.className = 'aig-settings-actions';
     actions.innerHTML =
-        '<button class="cos-pbtn cos-pbtn-danger cos-pbtn-sm" id="aigSetClear">清空 Key</button>' +
+        '<button class="cos-pbtn cos-pbtn-success cos-pbtn-sm" id="aigAddApi">+ 新增 API</button>' +
         '<button class="cos-pbtn cos-pbtn-secondary cos-pbtn-sm" id="aigSetCancel">取消</button>' +
         '<button class="cos-pbtn cos-pbtn-primary cos-pbtn-sm" id="aigSetSave">保存</button>';
     ov.appendChild(actions);
@@ -65,24 +56,30 @@ AIImageGenSkill._showSettings = function() {
     ov.querySelector('#aigSettingsClose').addEventListener('click', function() { self._closeSettings(); });
     ov.querySelector('#aigSetCancel').addEventListener('click', function() { self._closeSettings(); });
     ov.querySelector('#aigSetSave').addEventListener('click', function() { self._saveSettings(); });
-    ov.querySelector('#aigSetClear').addEventListener('click', function() {
-        ov.querySelector('#aigSetKey').value = '';
-        self._apiKey = '';
-        self._autoSave();
-        self._setStatus('Key 已清空');
-        self._closeSettings();
-    });
-    ov.querySelector('#aigSetBase').addEventListener('input', function() {
-        var link = ov.querySelector('#aigGetKeyLink');
-        var val = this.value.trim() || 'https://api3.wlai.vip';
-        link.href = val + '/register?aff=b1VJ';
-    });
+    ov.querySelector('#aigAddApi').addEventListener('click', function() { self._showAddApiDialog(); });
+    this._bindApiListEvents();
 };
 
 AIImageGenSkill._saveSettings = function() {
     if (!this._settingsEl) return;
-    this._apiBase = this._settingsEl.querySelector('#aigSetBase').value.trim() || 'https://api3.wlai.vip';
-    this._apiKey = this._settingsEl.querySelector('#aigSetKey').value.trim();
+    
+    // 保存所有 API 配置
+    var apiItems = this._settingsEl.querySelectorAll('.aig-api-item');
+    apiItems.forEach(function(item) {
+        var apiId = parseInt(item.dataset.apiId);
+        var nameInput = item.querySelector('.aig-api-name');
+        var baseInput = item.querySelector('.aig-api-base');
+        var keyInput = item.querySelector('.aig-api-key');
+        
+        if (nameInput && baseInput && keyInput) {
+            this._updateApi(apiId, {
+                name: nameInput.value.trim(),
+                base: baseInput.value.trim(),
+                key: keyInput.value.trim()
+            });
+        }
+    }.bind(this));
+    
     this._autoSave();
     this._setStatus('设置已保存');
     this._closeSettings();
@@ -93,6 +90,108 @@ AIImageGenSkill._closeSettings = function() {
         this._settingsEl.parentNode.removeChild(this._settingsEl);
     }
     this._settingsEl = null;
+};
+
+// ========== API 列表渲染与事件 ==========
+
+AIImageGenSkill._renderApiList = function() {
+    var html = '<div class="aig-api-list">';
+    
+    this._apiConfigs.forEach(function(api) {
+        var isActive = api.active;
+        html += '<div class="aig-api-item" data-api-id="' + api.id + '">' +
+            '<div class="aig-api-header">';
+        
+        // 使用圆点选择器替代勾选框
+        html += '<label class="aig-api-selector">' +
+            '<input type="radio" name="activeApi" value="' + api.id + '" ' + (isActive ? 'checked' : '') + '>' +
+            '<span class="aig-radio-dot"></span>' +
+            '</label>';
+        
+        html += '<span class="aig-api-number">#' + api.id + '</span>' +
+            '<input type="text" class="aig-api-name" placeholder="API 名称" value="' + this._escapeHtml(api.name) + '">' +
+            '<button class="aig-api-delete" data-api-id="' + api.id + '" title="删除">×</button>' +
+            '</div>' +
+            '<div class="aig-api-fields">' +
+            '<div class="aig-api-field">' +
+            '<span class="aig-api-label">地址:</span>' +
+            '<input type="text" class="aig-api-base" placeholder="https://api3.wlai.vip" value="' + this._escapeHtml(api.base) + '">' +
+            '</div>' +
+            '<div class="aig-api-field">' +
+            '<span class="aig-api-label">Key:</span>' +
+            '<input type="password" class="aig-api-key" placeholder="sk-..." value="' + this._escapeHtml(api.key) + '">' +
+            '<a class="aig-api-link" href="' + this._escapeHtml(api.base || 'https://api3.wlai.vip') + '/register?aff=b1VJ" target="_blank">获取</a>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    }.bind(this));
+    
+    html += '</div>';
+    return html;
+};
+
+AIImageGenSkill._bindApiListEvents = function() {
+    var self = this;
+    
+    if (!this._settingsEl) return;
+    
+    // 绑定 API 选择器事件
+    var radios = this._settingsEl.querySelectorAll('input[name="activeApi"]');
+    radios.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            var apiId = parseInt(this.value);
+            self._switchApi(apiId);
+            self._setStatus('已切换到 ' + (self._getCurrentApi().name || 'API ' + apiId));
+        });
+    });
+    
+    // 绑定删除按钮事件
+    var deleteBtns = this._settingsEl.querySelectorAll('.aig-api-delete');
+    deleteBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var apiId = parseInt(this.dataset.apiId);
+            if (self._apiConfigs.length <= 1) {
+                self._setStatus('⚠️ 至少保留一个 API');
+                return;
+            }
+            
+            if (confirm('确定删除这个 API 吗？')) {
+                self._removeApi(apiId);
+                this.closest('.aig-api-item').remove();
+                self._setStatus('API 已删除');
+            }
+        });
+    });
+    
+    // 绑定 API 地址输入事件（更新获取链接）
+    var baseInputs = this._settingsEl.querySelectorAll('.aig-api-base');
+    baseInputs.forEach(function(input) {
+        input.addEventListener('input', function() {
+            var link = this.closest('.aig-api-field').querySelector('.aig-api-link');
+            var val = this.value.trim() || 'https://api3.wlai.vip';
+            link.href = val + '/register?aff=b1VJ';
+        });
+    });
+};
+
+AIImageGenSkill._showAddApiDialog = function() {
+    var self = this;
+    var name = prompt('请输入新 API 名称:', 'API ' + (this._apiConfigs.length + 1));
+    if (!name) return;
+    
+    var base = prompt('请输入 API 地址:', 'https://api3.wlai.vip');
+    if (!base) base = 'https://api3.wlai.vip';
+    
+    var key = prompt('请输入 API Key (可选，可在设置中后续添加):', '');
+    
+    var newApi = this._addApi(name, base, key);
+    
+    // 重新渲染列表
+    var body = this._settingsEl.querySelector('.aig-settings-body');
+    body.innerHTML = this._renderApiList();
+    this._bindApiListEvents();
+    
+    this._setStatus('已添加 ' + newApi.name);
 };
 
 // ========== 图片查看 ==========

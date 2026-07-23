@@ -13,8 +13,16 @@ var AIImageGenSkill = {
     _overlay: null,
     _modalEl: null,
     _modalCreated: false,
-    _apiKey: '',
-    _apiBase: 'https://api3.wlai.vip',
+    _apiConfigs: [
+        {
+            id: 1,
+            name: 'API 1',
+            base: 'https://api3.wlai.vip',
+            key: '',
+            active: true
+        }
+    ],
+    _currentApiId: 1,
     _defaultModel: 'gpt-image-2',
     _historyRecords: null,
     _historyPage: 0,
@@ -143,5 +151,67 @@ var AIImageGenSkill = {
         // 计算最简比例
         var g = function(a,b){ while(b){ var t=b; b=a%b; a=t; } return a; }(ow, oh);
         return { baseK: baseK, ratioW: ow/g, ratioH: oh/g };
+    },
+
+    // ===== API 管理 =====
+    _getCurrentApi: function() {
+        return this._apiConfigs.find(api => api.id === this._currentApiId) || this._apiConfigs[0];
+    },
+    
+    _getCurrentApiKey: function() {
+        var api = this._getCurrentApi();
+        return api ? api.key : '';
+    },
+    
+    _getCurrentApiBase: function() {
+        var api = this._getCurrentApi();
+        return api ? api.base : 'https://api3.wlai.vip';
+    },
+    
+    _addApi: function(name, base, key) {
+        var newId = Math.max(...this._apiConfigs.map(api => api.id)) + 1;
+        var newApi = {
+            id: newId,
+            name: name || 'API ' + newId,
+            base: base || 'https://api3.wlai.vip',
+            key: key || '',
+            active: false
+        };
+        this._apiConfigs.push(newApi);
+        this._autoSave();
+        return newApi;
+    },
+    
+    _removeApi: function(id) {
+        if (this._apiConfigs.length <= 1) return false;
+        this._apiConfigs = this._apiConfigs.filter(api => api.id !== id);
+        if (this._currentApiId === id) {
+            this._currentApiId = this._apiConfigs[0].id;
+            this._apiConfigs[0].active = true;
+        }
+        this._autoSave();
+        return true;
+    },
+    
+    _switchApi: function(id) {
+        this._apiConfigs.forEach(api => api.active = false);
+        var targetApi = this._apiConfigs.find(api => api.id === id);
+        if (targetApi) {
+            targetApi.active = true;
+            this._currentApiId = id;
+            this._autoSave();
+            return true;
+        }
+        return false;
+    },
+    
+    _updateApi: function(id, updates) {
+        var api = this._apiConfigs.find(api => api.id === id);
+        if (api) {
+            Object.assign(api, updates);
+            this._autoSave();
+            return true;
+        }
+        return false;
     }
 };

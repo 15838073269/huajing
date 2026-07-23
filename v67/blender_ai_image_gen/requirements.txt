@@ -1,0 +1,23 @@
+# Blender AI Image Generation Plugin Dependencies
+# 
+# Note: These dependencies should already be available in Blender's Python environment
+# If not, they may need to be installed manually
+
+# Core dependencies (usually built into Blender)
+requests>=2.25.0
+# bpy (comes with Blender)
+# base64 (Python standard library)
+# json (Python standard library)
+# threading (Python standard library)
+# time (Python standard library)
+# os (Python standard library)
+# typing (Python 3.5+ standard library)
+
+# Optional dependencies for enhanced functionality
+tqdm>=4.60.0  # Progress bars (if needed)
+Pillow>=8.0.0  # Advanced image processing (if needed)
+
+# Note: To install additional packages for Blender's Python:
+# 1. Find Blender's Python executable (usually in Blender installation directory)
+# 2. Use: /path/to/blender/python/bin/python -m pip install package_name
+# 3. Or use Blender's bundled pip if available

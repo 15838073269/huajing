@@ -22,8 +22,16 @@ AIImageGenSkill._autoSave = function() {
     var self = this;
     var meta = {
         lastParams: this._lastParams || { mode: 'auto', baseK: '1k', ratioW: 1, ratioH: 1 },
-        apiKey: this._apiKey || '',
-        apiBase: this._apiBase || 'https://api3.wlai.vip',
+        apiConfigs: this._apiConfigs || [
+            {
+                id: 1,
+                name: 'API 1',
+                base: 'https://api3.wlai.vip',
+                key: '',
+                active: true
+            }
+        ],
+        currentApiId: this._currentApiId || 1,
         defaultModel: this._defaultModel || 'gpt-image-2',
         formState: {
             mode: this._formState.mode,
@@ -51,8 +59,23 @@ AIImageGenSkill._loadSettings = function() {
             req.onsuccess = function() {
                 var meta = req.result;
                 if (meta) {
-                    if (meta.apiKey) self._apiKey = meta.apiKey;
-                    if (meta.apiBase) self._apiBase = meta.apiBase;
+                    // 兼容旧版本的单个 API 配置
+                    if (meta.apiConfigs) {
+                        self._apiConfigs = meta.apiConfigs;
+                        self._currentApiId = meta.currentApiId || 1;
+                    } else if (meta.apiKey) {
+                        // 从旧版本迁移
+                        self._apiConfigs = [
+                            {
+                                id: 1,
+                                name: 'API 1',
+                                base: meta.apiBase || 'https://api3.wlai.vip',
+                                key: meta.apiKey || '',
+                                active: true
+                            }
+                        ];
+                        self._currentApiId = 1;
+                    }
                     if (meta.defaultModel) self._defaultModel = meta.defaultModel;
                     if (meta.lastParams) self._lastParams = meta.lastParams;
                     if (meta.formState) {
