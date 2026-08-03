@@ -19,6 +19,7 @@ var PLUGIN_LIST = [
     'js/skills/mp42sprites.js',     // 🎬 视频抽帧 - 帧提取+预览+下载
     'js/skills/tile-tool.js',       // 🖼️ 素材拆分合并 - 矩形/异形拆分+合并拼图
     'js/skills/seamless-tile.js',   // ♾️ 无缝平铺 - 单图无限平铺预览
+    'js/skills/pixel-align.js',    // 齐 像素对齐 - 下采样+调色盘+抖动→保存到画布
 
     // === 媒体播放 ===
 
@@ -28,8 +29,21 @@ var PLUGIN_LIST = [
     // === 编辑器 ===
     'js/skills/node-editor.js',  // 📋 节点编辑器 - 分镜式节点编辑
 
-    // === 像素画 ===
-    'js/skills/pixel-paint.js',  // 像素画 - 数字像素绘画系统
+    // === 像素画（多文件插件，按顺序加载，请勿调整顺序） ===
+    'js/skills/pixelpaint/pp-texts.js',       //    文本常量
+    'js/skills/pixelpaint/pp-core.js',        //    主对象+属性+生命周期+UI构建+事件绑定+初始化
+    'js/skills/pixelpaint/pp-canvas.js',      //    画布渲染+数据+视口+撤销重做+帧数据
+    'js/skills/pixelpaint/pp-tabs.js',        //    标签页管理
+    'js/skills/pixelpaint/pp-colors.js',      //    色块渲染和管理
+    'js/skills/pixelpaint/pp-brushes.js',     //    笔刷渲染和管理+工具切换+填充
+    'js/skills/pixelpaint/pp-tools.js',       //    画布交互（鼠标/键盘/滚轮）
+    'js/skills/pixelpaint/pp-selection.js',   //    选区操作（框选/移动/翻转/旋转）
+    'js/skills/pixelpaint/pp-animation.js',   //    时间轴+动画播放+帧层管理
+    'js/skills/pixelpaint/pp-io.js',          //    导入导出+尺寸调整+清空+重置
+    'js/skills/pixelpaint/pp-image-proc.js',  //    图片处理（Median Cut减色+导入）
+    'js/skills/pixelpaint/pp-storage.js',     //    IndexedDB持久化
+    'js/skills/pixelpaint/pp-3d.js',          //    3D面编辑+像素对齐校准
+    // 'js/skills/pixel-paint.js',  // 像素画旧版单文件（已备份，不再加载）
 
     // === 动画 ===
     // 'js/skills/spine-animate.js', // 🦴 骨骼动画 - FK/IK/约束/缓动/弹性物理
@@ -100,4 +114,5 @@ var PLUGIN_NUMBERS = {
     // 'font-craft': 20
     'hanzi-3500': 25,
     'pinyin-lookup': 26,
+    'pixel-align': 29,
 };

@@ -13,8 +13,17 @@ AIImageGenSkill._generate = async function() {
     var rawPrompt = (fs.prompt || '').trim();
     if (!rawPrompt) { this._setStatus('⚠️ 输入提示词'); return; }
 
+    // 检查是否有API配置
+    if (!this._getCurrentApi()) { this._setStatus('⚠️ 请先配置 API 服务'); return; }
+    
     var apiKey = (this._getCurrentApiKey() || '').trim();
     if (!apiKey) { this._setStatus('⚠️ 设置 API Key'); return; }
+
+    var apiBase = this._getCurrentApiBase();
+    if (!apiBase) { this._setStatus('⚠️ 设置 API 地址'); return; }
+
+    var apiModel = this._getCurrentApiModel();
+    if (!apiModel) { this._setStatus('⚠️ 设置大模型名称'); return; }
 
     // 从提示词末尾提取 -宽x高 分辨率后缀
     var prompt = rawPrompt;
@@ -96,11 +105,11 @@ AIImageGenSkill._generate = async function() {
                 formData.append('image', new File([new Blob([arr], { type: 'image/png' })], fileName, { type: 'image/png' }));
             }
             formData.append('prompt', prompt);
-            formData.append('model', 'gpt-image-2');
+            formData.append('model', apiModel);
             formData.append('n', String(fs.numImages || 1));
             formData.append('size', overrideSize || this._getSizeString(fs));
             if (fs.quality) formData.append('quality', fs.quality);
-            resp = await fetch((this._getCurrentApiBase() || 'https://api3.wlai.vip') + '/v1/images/edits', {
+            resp = await fetch(this._getCurrentApiBase() + '/v1/images/edits', {
                 method: 'POST',
                 headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + apiKey },
                 body: formData
@@ -108,13 +117,13 @@ AIImageGenSkill._generate = async function() {
         } else {
             // 文生图：JSON + /images/generations
             var bodyObj = {
-                model: 'gpt-image-2',
+                model: apiModel,
                 prompt: prompt,
                 n: fs.numImages || 1,
                 size: overrideSize || this._getSizeString(fs)
             };
             if (fs.quality) bodyObj.quality = fs.quality;
-            resp = await fetch((this._getCurrentApiBase() || 'https://api3.wlai.vip') + '/v1/images/generations', {
+            resp = await fetch(this._getCurrentApiBase() + '/v1/images/generations', {
                 method: 'POST',
                 headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
                 body: JSON.stringify(bodyObj)
@@ -178,7 +187,7 @@ AIImageGenSkill._generate = async function() {
         // 保存到历史：用当次参数的快照，避免 async 连续提交时共享的 this._formState 被改写导致 prompt 串写
         var snap = {
             prompt: rawPrompt,
-            model: fs.model || 'gpt-image-2',
+            model: apiModel,
             mode: fs.mode || 'auto',
             baseK: fs.baseK || '1k',
             ratioW: fs.ratioW || 1,

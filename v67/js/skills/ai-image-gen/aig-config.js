@@ -13,16 +13,8 @@ var AIImageGenSkill = {
     _overlay: null,
     _modalEl: null,
     _modalCreated: false,
-    _apiConfigs: [
-        {
-            id: 1,
-            name: 'API 1',
-            base: 'https://api3.wlai.vip',
-            key: '',
-            active: true
-        }
-    ],
-    _currentApiId: 1,
+    _apiConfigs: [],
+    _currentApiId: null,
     _defaultModel: 'gpt-image-2',
     _historyRecords: null,
     _historyPage: 0,
@@ -155,6 +147,7 @@ var AIImageGenSkill = {
 
     // ===== API 管理 =====
     _getCurrentApi: function() {
+        if (this._apiConfigs.length === 0) return null;
         return this._apiConfigs.find(api => api.id === this._currentApiId) || this._apiConfigs[0];
     },
     
@@ -165,17 +158,23 @@ var AIImageGenSkill = {
     
     _getCurrentApiBase: function() {
         var api = this._getCurrentApi();
-        return api ? api.base : 'https://api3.wlai.vip';
+        return api ? api.base : null;
     },
     
-    _addApi: function(name, base, key) {
-        var newId = Math.max(...this._apiConfigs.map(api => api.id)) + 1;
+    _getCurrentApiModel: function() {
+        var api = this._getCurrentApi();
+        return (api && api.model) ? api.model : this._defaultModel;
+    },
+    
+    _addApi: function(name, base, key, model) {
+        var newId = this._apiConfigs.length > 0 ? Math.max(...this._apiConfigs.map(api => api.id)) + 1 : 1;
         var newApi = {
             id: newId,
             name: name || 'API ' + newId,
-            base: base || 'https://api3.wlai.vip',
+            base: base || '',
             key: key || '',
-            active: false
+            model: model || '',
+            active: this._apiConfigs.length === 0
         };
         this._apiConfigs.push(newApi);
         this._autoSave();
@@ -183,7 +182,12 @@ var AIImageGenSkill = {
     },
     
     _removeApi: function(id) {
-        if (this._apiConfigs.length <= 1) return false;
+        if (this._apiConfigs.length <= 1) {
+            this._apiConfigs = [];
+            this._currentApiId = null;
+            this._autoSave();
+            return true;
+        }
         this._apiConfigs = this._apiConfigs.filter(api => api.id !== id);
         if (this._currentApiId === id) {
             this._currentApiId = this._apiConfigs[0].id;
@@ -194,6 +198,10 @@ var AIImageGenSkill = {
     },
     
     _switchApi: function(id) {
+        if (this._apiConfigs.length === 0) {
+            this._currentApiId = null;
+            return false;
+        }
         this._apiConfigs.forEach(api => api.active = false);
         var targetApi = this._apiConfigs.find(api => api.id === id);
         if (targetApi) {

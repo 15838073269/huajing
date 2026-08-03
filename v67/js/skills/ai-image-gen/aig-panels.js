@@ -70,12 +70,14 @@ AIImageGenSkill._saveSettings = function() {
         var nameInput = item.querySelector('.aig-api-name');
         var baseInput = item.querySelector('.aig-api-base');
         var keyInput = item.querySelector('.aig-api-key');
+        var modelInput = item.querySelector('.aig-api-model');
         
         if (nameInput && baseInput && keyInput) {
             this._updateApi(apiId, {
                 name: nameInput.value.trim(),
                 base: baseInput.value.trim(),
-                key: keyInput.value.trim()
+                key: keyInput.value.trim(),
+                model: modelInput ? modelInput.value.trim() : ''
             });
         }
     }.bind(this));
@@ -115,12 +117,16 @@ AIImageGenSkill._renderApiList = function() {
             '<div class="aig-api-fields">' +
             '<div class="aig-api-field">' +
             '<span class="aig-api-label">地址:</span>' +
-            '<input type="text" class="aig-api-base" placeholder="https://api3.wlai.vip" value="' + this._escapeHtml(api.base) + '">' +
+            '<input type="text" class="aig-api-base" placeholder="https://" value="' + this._escapeHtml(api.base) + '">' +
+            '</div>' +
+            '<div class="aig-api-field">' +
+            '<span class="aig-api-label">模型:</span>' +
+            '<input type="text" class="aig-api-model" placeholder="gpt-image-1" value="' + this._escapeHtml(api.model || '') + '">' +
             '</div>' +
             '<div class="aig-api-field">' +
             '<span class="aig-api-label">Key:</span>' +
             '<input type="password" class="aig-api-key" placeholder="sk-..." value="' + this._escapeHtml(api.key) + '">' +
-            '<a class="aig-api-link" href="' + this._escapeHtml(api.base || 'https://api3.wlai.vip') + '/register?aff=b1VJ" target="_blank">获取</a>' +
+            '<a class="aig-api-link" href="#" target="_blank">获取</a>' +
             '</div>' +
             '</div>' +
             '</div>';
@@ -145,31 +151,40 @@ AIImageGenSkill._bindApiListEvents = function() {
         });
     });
     
-    // 绑定删除按钮事件
-    var deleteBtns = this._settingsEl.querySelectorAll('.aig-api-delete');
-    deleteBtns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var apiId = parseInt(this.dataset.apiId);
-            if (self._apiConfigs.length <= 1) {
-                self._setStatus('⚠️ 至少保留一个 API');
-                return;
-            }
-            
-            if (confirm('确定删除这个 API 吗？')) {
-                self._removeApi(apiId);
-                this.closest('.aig-api-item').remove();
-                self._setStatus('API 已删除');
-            }
-        });
-    });
+            // 绑定删除按钮事件
+            var deleteBtns = this._settingsEl.querySelectorAll('.aig-api-delete');
+            deleteBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var apiId = parseInt(this.dataset.apiId);
+                    
+                    if (confirm('确定删除这个 API 吗？')) {
+                        var success = self._removeApi(apiId);
+                        if (success) {
+                            this.closest('.aig-api-item').remove();
+                            self._setStatus('API 已删除');
+                            
+                            // 如果没有API了，提示用户添加
+                            if (self._apiConfigs.length === 0) {
+                                self._setStatus('⚠️ 没有可用的 API，请先添加一个 API 配置');
+                            }
+                        }
+                    }
+                });
+            });
     
     // 绑定 API 地址输入事件（更新获取链接）
     var baseInputs = this._settingsEl.querySelectorAll('.aig-api-base');
     baseInputs.forEach(function(input) {
         input.addEventListener('input', function() {
             var link = this.closest('.aig-api-field').querySelector('.aig-api-link');
-            var val = this.value.trim() || 'https://api3.wlai.vip';
-            link.href = val + '/register?aff=b1VJ';
+            var val = this.value.trim();
+            if (val && val.startsWith('http')) {
+                link.href = val + '/register';
+                link.textContent = '获取';
+            } else {
+                link.href = '#';
+                link.textContent = '需在地址后添加/register';
+            }
         });
     });
 };
@@ -179,12 +194,14 @@ AIImageGenSkill._showAddApiDialog = function() {
     var name = prompt('请输入新 API 名称:', 'API ' + (this._apiConfigs.length + 1));
     if (!name) return;
     
-    var base = prompt('请输入 API 地址:', 'https://api3.wlai.vip');
-    if (!base) base = 'https://api3.wlai.vip';
+    var base = prompt('请输入 API 地址:', '');
+    if (!base) return; // 用户取消或留空
     
     var key = prompt('请输入 API Key (可选，可在设置中后续添加):', '');
     
-    var newApi = this._addApi(name, base, key);
+    var model = prompt('请输入大模型名称 (如 gpt-image-1):', '');
+    
+    var newApi = this._addApi(name, base, key, model);
     
     // 重新渲染列表
     var body = this._settingsEl.querySelector('.aig-settings-body');

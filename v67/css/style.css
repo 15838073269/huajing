@@ -1085,7 +1085,8 @@ html, body {
 }
 
 .aig-api-base,
-.aig-api-key {
+.aig-api-key,
+.aig-api-model {
     flex: 1;
     background: rgba(20, 30, 60, 0.6);
     border: 1px solid var(--cos-border);
@@ -1098,7 +1099,8 @@ html, body {
 }
 
 .aig-api-base:focus,
-.aig-api-key:focus {
+.aig-api-key:focus,
+.aig-api-model:focus {
     outline: none;
     border-color: var(--cos-accent);
     box-shadow: 0 0 0 2px var(--cos-accent-soft);

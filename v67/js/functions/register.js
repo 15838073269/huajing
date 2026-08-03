@@ -1167,7 +1167,9 @@
           key = k.apiKey || '';
         } catch(e) {}
         if (!key) { rej(new Error('未配置 API Key')); return; }
-        fetch('https://api.openai.com/v1/images/generations', {
+        // Note: 用户需要配置自己的API端点
+        var apiUrl = 'https://api.openai.com/v1/images/generations'; // 用户可修改此URL
+        fetch(apiUrl, {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
           body: JSON.stringify(data)
         }).then(function(r) { return r.json(); }).then(function(j) {

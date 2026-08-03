@@ -32,7 +32,7 @@ AIImageGenSkill._saveToHistory = function(fs, dataUrls, totalSec) {
             var addReq = histStore.add({
                 prompt: fs.prompt || '',
                 thumbDataUrls: thumbDataUrls,
-                model: fs.model || 'gpt-image-2',
+                model: fs.model || '',
                 size: self._getSizeString(fs),
                 mode: fs.mode || 'auto', baseK: fs.baseK || '1k', ratioW: fs.ratioW || 1, ratioH: fs.ratioH || 1,
                 quality: fs.quality || 'medium',
@@ -270,7 +270,7 @@ AIImageGenSkill._restoreFromHistory = function(record) {
         self._formState.baseK = record.baseK || '1k';
         self._formState.ratioW = record.ratioW || 1;
         self._formState.ratioH = record.ratioH || 1;
-        self._formState.model = 'gpt-image-2';
+        self._formState.model = record.model || 'gpt-image-2';
         self._formState.quality = record.quality || 'medium';
         self._formState.format = record.format || 'png';
         self._formState.numImages = numImages;

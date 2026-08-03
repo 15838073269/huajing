@@ -22,16 +22,8 @@ AIImageGenSkill._autoSave = function() {
     var self = this;
     var meta = {
         lastParams: this._lastParams || { mode: 'auto', baseK: '1k', ratioW: 1, ratioH: 1 },
-        apiConfigs: this._apiConfigs || [
-            {
-                id: 1,
-                name: 'API 1',
-                base: 'https://api3.wlai.vip',
-                key: '',
-                active: true
-            }
-        ],
-        currentApiId: this._currentApiId || 1,
+        apiConfigs: this._apiConfigs || [],
+        currentApiId: this._currentApiId || null,
         defaultModel: this._defaultModel || 'gpt-image-2',
         formState: {
             mode: this._formState.mode,
@@ -60,17 +52,23 @@ AIImageGenSkill._loadSettings = function() {
                 var meta = req.result;
                 if (meta) {
                     // 兼容旧版本的单个 API 配置
-                    if (meta.apiConfigs) {
+                    if (meta.apiConfigs && meta.apiConfigs.length > 0) {
                         self._apiConfigs = meta.apiConfigs;
-                        self._currentApiId = meta.currentApiId || 1;
+                        // 向后兼容：为缺少 model 字段的旧配置补上默认值
+                        self._apiConfigs.forEach(function(api) {
+                            if (!api.model) api.model = '';
+                        });
+                        self._currentApiId = meta.currentApiId || (self._apiConfigs.length > 0 ? self._apiConfigs[0].id : null);
                     } else if (meta.apiKey) {
-                        // 从旧版本迁移
+                        // 从旧版本迁移 - 清理旧版本中的硬编码URL
+                        var oldBase = meta.apiBase || '';
                         self._apiConfigs = [
                             {
                                 id: 1,
                                 name: 'API 1',
-                                base: meta.apiBase || 'https://api3.wlai.vip',
+                                base: oldBase.startsWith('http') ? oldBase : '',
                                 key: meta.apiKey || '',
+                                model: meta.defaultModel || '',
                                 active: true
                             }
                         ];
@@ -84,7 +82,7 @@ AIImageGenSkill._loadSettings = function() {
                         self._formState.baseK = fs.baseK || '1k';
                         self._formState.ratioW = fs.ratioW || 1;
                         self._formState.ratioH = fs.ratioH || 1;
-                        self._formState.model = 'gpt-image-2';
+                        self._formState.model = 'gpt-image-2'; // UI 用的默认模型，实际 API 调用使用 apiConfigs 中的 model
                         self._formState.quality = fs.quality || 'medium';
                         self._formState.format = fs.format || 'png';
                         self._formState.numImages = fs.numImages || 1;

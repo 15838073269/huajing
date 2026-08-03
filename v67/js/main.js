@@ -49,7 +49,7 @@
         var promises = PLUGIN_LIST.map(function(src) {
             return new Promise(function(resolve) {
                 var s = document.createElement('script');
-                s.src = src + '?v=133';
+                s.src = src + '?v=147';
                 s.async = false; // 保证多文件插件的执行顺序
                 s.onload = resolve;
                 s.onerror = function() { console.warn('[PluginLoader] 加载失败: ' + src); resolve(); };
@@ -113,7 +113,7 @@
         }
         // 自动安装：仅补装本次新增的插件（不影响用户主动卸载/禁用的其它插件）
         (function() {
-            var NEW = ['seamless-tile'];
+            var NEW = ['seamless-tile', 'pixel-align'];
             var installed = SkillSystem.getAll();
             NEW.forEach(function(id) {
                 if (!installed[id] && SkillSystem.getPlugins()[id]) SkillSystem.installPlugin(id);
@@ -123,8 +123,11 @@
                 var a = JSON.parse(localStorage.getItem('cos-bag-assignments') || '{}');
                 if (!a['seamless-tile']) {
                     a['seamless-tile'] = 'red';
-                    localStorage.setItem('cos-bag-assignments', JSON.stringify(a));
                 }
+                if (!a['pixel-align']) {
+                    a['pixel-align'] = 'red';
+                }
+                localStorage.setItem('cos-bag-assignments', JSON.stringify(a));
             } catch (e) {}
         })();
         // 插件全部注册后再恢复排序
